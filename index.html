@@ -554,12 +554,27 @@ select.form-input{cursor:pointer}
 const SUPABASE_URL = 'https://ejqdhcxubivyskyfnedk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_AGtrevUR0AQfOVp9S9hzCA_CiuLTaRg';
 
+// Custom fetch with 10s timeout for all Supabase requests
+const sbFetch = (url, options={}) => {
+  const controller = new AbortController();
+  const tid = setTimeout(()=>controller.abort(), 10000);
+  return fetch(url, {...options, signal:controller.signal})
+    .finally(()=>clearTimeout(tid))
+    .catch(e=>{
+      if(e.name==='AbortError') throw new Error('timeout');
+      throw e;
+    });
+};
+
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    persistSession: true,         // сессия сохраняется в localStorage
+    persistSession: true,
     autoRefreshToken: true,
-    storageKey: 'villagess-auth'
-  }
+    storageKey: 'villagess-auth',
+    detectSessionInUrl: true,
+  },
+  global: { fetch: sbFetch },
+  realtime: { timeout: 10000 },
 });
 
 const GAME_CENTER = [56.450279, 52.427013];
@@ -1117,7 +1132,7 @@ async function loadCats() {
   let data = null;
   try {
     const res = await fetchWithTimeout(
-      sb.from('forum_categories').select('*').order('created_at').then(r=>r),
+      ()=> sb.from('forum_categories').select('*').order('created_at').then(r=>r),
       10000
     );
     data = res?.data || null;
@@ -1174,7 +1189,7 @@ async function showForumIndex() {
   let allThreads = [];
   try {
     const r = await fetchWithTimeout(
-      sb.from('forum_threads')
+      ()=> sb.from('forum_threads')
         .select('id,title,category_id,reply_count,created_at,profiles(username,avatar_url)')
         .order('created_at',{ascending:false})
         .then(r=>r.data||[]),
@@ -1415,11 +1430,24 @@ function prefixColor(prefix) {
 }
 
 // Helper: fetch with timeout
-async function fetchWithTimeout(promise, ms=8000) {
-  return Promise.race([
-    promise,
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))
-  ]);
+async function fetchWithTimeout(promiseOrFn, ms=8000) {
+  const run = () => {
+    const p = typeof promiseOrFn === 'function' ? promiseOrFn() : promiseOrFn;
+    return Promise.race([
+      p,
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))
+    ]);
+  };
+  try {
+    return await run();
+  } catch(e) {
+    if(e.message === 'timeout' && typeof promiseOrFn === 'function') {
+      // Auto-retry once after short pause
+      await new Promise(r=>setTimeout(r,1000));
+      return run();
+    }
+    throw e;
+  }
 }
 
 async function openThread(id) {
@@ -1438,13 +1466,13 @@ async function openThread(id) {
   try {
     [t, posts] = await Promise.all([
       fetchWithTimeout(
-        sb.from('forum_threads')
+        ()=> sb.from('forum_threads')
           .select('*,profiles(username,role,avatar_url)')
           .eq('id', id).single()
           .then(r => { if(r.error) throw r.error; return r.data; })
       ),
       fetchWithTimeout(
-        sb.from('forum_posts')
+        ()=> sb.from('forum_posts')
           .select('*,profiles(username,role,avatar_url)')
           .eq('thread_id', id).order('created_at')
           .then(r => r.data || [])
@@ -2466,7 +2494,10 @@ function showPage(name) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+name)?.classList.add('active');
   document.querySelector(`.nav-btn[data-page="${name}"]`)?.classList.add('active');
-  curPage=name; PAGES[name](); window.scrollTo(0,0);
+  curPage=name;
+  // Always re-render — prevents stale content after idle
+  PAGES[name]();
+  window.scrollTo(0,0);
 }
 
 function openModal(html, wide=false) {
@@ -2511,10 +2542,38 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
   btn.addEventListener('click',()=>showPage(btn.dataset.page));
 });
 
+// ── KEEPALIVE — ping every 4min to prevent Supabase idle timeout ──
+setInterval(async ()=>{
+  try { await sb.from('profiles').select('id').limit(1); } catch(e){}
+}, 4 * 60 * 1000);
+
+// ── VISIBILITY — refresh current page when tab becomes visible again ──
+let hiddenAt = null;
+document.addEventListener('visibilitychange', async ()=>{
+  if(document.hidden) {
+    hiddenAt = Date.now();
+  } else {
+    // If tab was hidden for more than 2 minutes — refresh current page
+    if(hiddenAt && Date.now() - hiddenAt > 2 * 60 * 1000) {
+      hiddenAt = null;
+      // Re-render the current page so stale content refreshes
+      const fn = {
+        about:   renderAbout,
+        game:    renderGame,
+        forum:   ()=>{ F.cats=[]; F.cat=null; F.thread=null; renderForum(); },
+        top:     renderTop,
+        profile: renderProfile,
+      }[curPage];
+      if(fn) fn();
+    } else {
+      hiddenAt = null;
+    }
+  }
+});
+
 // ── BOOT ──
 (async()=>{
   await initAuth();
-  // If URL has auth code — user came from email confirm link, go to profile
   const urlParams = new URLSearchParams(window.location.search);
   const wasRedirect = urlParams.has('code') || document.referrer.includes('supabase');
   showPage(wasRedirect && curUser ? 'profile' : 'about');
