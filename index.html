@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ВиллаГесс</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+/* ── RESET & ROOT ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0c;--bg2:#111115;--bg3:#18181f;--bg4:#1e1e28;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);
+  --text:#f0f0f5;--muted:rgba(240,240,245,.45);
+  --accent:#7c6aff;--accent2:#ff4f7a;--accent3:#00e5a0;
+  --radius:14px;--radius-sm:9px;
+  --font-d:'Syne',sans-serif;--font-b:'DM Sans',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-size:15px;line-height:1.6;min-height:100vh;overflow-x:hidden}
+
+/* ── NAV ── */
+#navbar{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;gap:8px;
+  padding:0 28px;height:58px;
+  background:rgba(10,10,12,.9);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{font-family:var(--font-d);font-weight:800;font-size:17px;letter-spacing:-.3px;color:var(--text);margin-right:auto;user-select:none;cursor:pointer}
+.nav-logo span{color:var(--accent)}
+.nav-links{display:flex;gap:2px}
+.nav-btn{background:none;border:none;color:var(--muted);font-family:var(--font-b);font-size:13.5px;font-weight:500;padding:6px 13px;border-radius:8px;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:6px}
+.nav-btn svg{width:14px;height:14px;flex-shrink:0}
+.nav-btn:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.nav-btn.active{color:var(--text);background:rgba(124,106,255,.14)}
+.nav-auth{display:flex;gap:8px;margin-left:12px;align-items:center}
+
+/* ── BUTTONS ── */
+.btn-ghost{background:none;border:1px solid var(--border2);color:var(--text);font-family:var(--font-b);font-size:13px;font-weight:500;padding:7px 16px;border-radius:var(--radius-sm);cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:var(--accent);border:none;color:#fff;font-family:var(--font-b);font-size:13px;font-weight:600;padding:8px 18px;border-radius:var(--radius-sm);cursor:pointer;transition:all .18s;box-shadow:0 0 22px rgba(124,106,255,.38);display:inline-flex;align-items:center;gap:6px}
+.btn-primary:hover{background:#9083ff;transform:translateY(-1px);box-shadow:0 6px 28px rgba(124,106,255,.5)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-danger{background:rgba(255,79,122,.12);border:1px solid rgba(255,79,122,.28);color:var(--accent2);font-family:var(--font-b);font-size:12px;font-weight:500;padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:all .18s}
+.btn-danger:hover{background:rgba(255,79,122,.22)}
+.btn-green{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.28);color:var(--accent3);font-family:var(--font-b);font-size:12px;font-weight:600;padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:all .18s}
+.btn-green:hover{background:rgba(0,229,160,.2)}
+.btn-sm{padding:5px 12px;font-size:12px}
+
+/* ── MAIN ── */
+#main{padding-top:58px;min-height:100vh}
+.page{display:none}.page.active{display:block}
+
+/* ── CARD ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+
+/* ── MODAL ── */
+#modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center}
+#modal-overlay.hidden{display:none}
+#modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:32px;width:430px;max-width:95vw;position:relative;box-shadow:0 28px 80px rgba(0,0,0,.65)}
+#modal-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.06);border:none;color:var(--muted);font-size:16px;width:30px;height:30px;border-radius:50%;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center}
+#modal-close:hover{background:rgba(255,255,255,.12);color:var(--text)}
+
+/* ── FORMS ── */
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.form-label{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.form-input{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-b);font-size:14px;padding:10px 13px;border-radius:var(--radius-sm);outline:none;transition:border-color .18s;width:100%}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--muted)}
+textarea.form-input{resize:vertical;min-height:80px}
+select.form-input{cursor:pointer}
+
+/* ── TOAST ── */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:11px 16px;border-radius:10px;font-size:13px;box-shadow:0 8px 32px rgba(0,0,0,.45);animation:slideIn .22s ease;max-width:280px;display:flex;align-items:center;gap:10px}
+.toast.success{border-left:3px solid var(--accent3)}
+.toast.error{border-left:3px solid var(--accent2)}
+.toast.info{border-left:3px solid var(--accent)}
+@keyframes slideIn{from{transform:translateX(18px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── ROLE BADGES ── */
+.role-badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.07em}
+.role-helper{background:rgba(91,200,245,.13);color:#5bc8f5;border:1px solid rgba(91,200,245,.28)}
+.role-mod{background:rgba(58,123,213,.13);color:#3a7bd5;border:1px solid rgba(58,123,213,.28)}
+.role-admin{background:rgba(26,86,219,.13);color:#5b8aff;border:1px solid rgba(26,86,219,.28)}
+.role-curator{background:rgba(155,89,182,.13);color:#b97fe0;border:1px solid rgba(155,89,182,.28)}
+.role-zga{background:rgba(168,224,99,.1);color:#a8e063;border:1px solid rgba(168,224,99,.28)}
+.role-ga{background:rgba(39,174,96,.1);color:#2ecc71;border:1px solid rgba(39,174,96,.28)}
+.role-coder{background:linear-gradient(90deg,rgba(255,79,122,.12),rgba(124,106,255,.12));border:1px solid rgba(255,79,122,.35);font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;animation:rgbBorder 3s linear infinite}
+.role-coder span{background:linear-gradient(90deg,#ff4f7a,#ff9f43,#7c6aff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+@keyframes rgbBorder{0%{border-color:rgba(255,79,122,.5)}33%{border-color:rgba(124,106,255,.5)}66%{border-color:rgba(255,159,67,.5)}100%{border-color:rgba(255,79,122,.5)}}
+
+/* ── ABOUT ── */
+.about-hero{min-height:calc(100vh - 58px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px;position:relative;overflow:hidden}
+.about-hero::before{content:'';position:absolute;top:5%;left:50%;transform:translateX(-50%);width:700px;height:700px;background:radial-gradient(ellipse,rgba(124,106,255,.07) 0%,transparent 68%);pointer-events:none}
+.about-pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border2);padding:6px 16px;border-radius:99px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:28px}
+.about-title{font-family:var(--font-d);font-size:clamp(48px,8vw,106px);font-weight:800;line-height:.92;letter-spacing:-3px;background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,.45) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+.about-title .accent{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.about-sub{font-size:17px;color:var(--muted);max-width:500px;line-height:1.75;margin-bottom:36px}
+.about-btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:70px}
+.about-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:880px;width:100%}
+.about-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:26px 22px;text-align:left;transition:border-color .2s,transform .2s}
+.about-card:hover{border-color:var(--border2);transform:translateY(-3px)}
+.about-card-icon{width:38px;height:38px;background:rgba(124,106,255,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.about-card-icon svg{width:20px;height:20px;color:var(--accent)}
+.about-card-title{font-family:var(--font-d);font-size:15px;font-weight:700;margin-bottom:7px}
+.about-card-text{font-size:13px;color:var(--muted);line-height:1.65}
+.about-footer{margin-top:20px;color:var(--muted);font-size:12.5px}
+
+/* ── GAME ── */
+.game-wrap{padding:28px 32px;max-width:1200px;margin:0 auto}
+.page-heading{font-family:var(--font-d);font-size:30px;font-weight:800;letter-spacing:-.5px}
+.page-sub{color:var(--muted);font-size:13.5px;margin-top:3px}
+.game-start-card{max-width:460px;margin:32px auto 0;text-align:center;padding:44px 36px}
+.game-start-icon{width:64px;height:64px;background:rgba(124,106,255,.1);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+.game-start-icon svg{width:32px;height:32px;color:var(--accent)}
+.round-options{display:flex;gap:10px;justify-content:center;margin-bottom:24px;flex-wrap:wrap}
+.round-opt{background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-family:var(--font-b);font-size:13px;padding:8px 20px;border-radius:var(--radius-sm);cursor:pointer;transition:all .18s}
+.round-opt.sel{background:rgba(124,106,255,.15);border-color:var(--accent);color:var(--text)}
+.game-active{padding:20px 32px}
+.game-topbar{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+.round-label{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.round-score{font-family:var(--font-d);font-size:24px;font-weight:700;color:var(--accent)}
+.progress-bar{height:3px;background:var(--bg3);border-radius:99px;margin-bottom:18px}
+.progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .4s ease}
+.game-layout{display:grid;grid-template-columns:1fr 330px;gap:18px}
+#map-photo{width:100%;height:480px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center}
+#map-photo img{width:100%;height:100%;object-fit:cover}
+.no-photo-msg{color:var(--muted);font-size:13px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+.no-photo-msg svg{width:40px;height:40px;opacity:.35}
+.game-sidebar{display:flex;flex-direction:column;gap:12px}
+.guess-map-wrap{width:100%;height:240px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border)}
+.guess-coords{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
+.hint-text{font-size:12.5px;color:var(--muted);padding:8px 10px;background:var(--bg3);border-radius:var(--radius-sm);display:none}
+.game-result-screen{padding:28px 32px;max-width:540px;margin:0 auto}
+.suggest-section{margin-top:28px;padding:0 32px 32px}
+
+/* ── FORUM ── */
+.forum-wrap{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 58px)}
+.forum-sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:22px 14px}
+.sidebar-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding:0 8px}
+.cat-btn{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;color:var(--muted);font-family:var(--font-b);font-size:13.5px;padding:9px 11px;border-radius:var(--radius-sm);cursor:pointer;text-align:left;transition:all .15s;margin-bottom:2px}
+.cat-btn:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.cat-btn.active{background:rgba(124,106,255,.12);color:var(--text)}
+.cat-btn svg{width:15px;height:15px;flex-shrink:0;opacity:.6}
+.forum-main{padding:26px 30px}
+.forum-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.forum-h{font-family:var(--font-d);font-size:22px;font-weight:800}
+.thread-list{display:flex;flex-direction:column;gap:8px}
+.thread-item{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;cursor:pointer;transition:all .15s}
+.thread-item:hover{border-color:var(--border2);background:var(--bg3)}
+.t-avatar{width:36px;height:36px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.t-avatar svg{width:18px;height:18px;color:var(--muted)}
+.t-info{flex:1;min-width:0}
+.t-title{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-meta{font-size:11.5px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.t-stats{display:flex;gap:14px;flex-shrink:0;font-size:12px;color:var(--muted)}
+.t-stat{display:flex;align-items:center;gap:5px}
+.t-stat svg{width:13px;height:13px}
+.post-list{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.post-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;display:grid;grid-template-columns:148px 1fr;gap:18px}
+.post-author{border-right:1px solid var(--border);padding-right:18px}
+.post-av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;margin-bottom:9px}
+.post-av svg{width:22px;height:22px;color:#fff}
+.post-uname{font-weight:600;font-size:13.5px;margin-bottom:5px}
+.post-body{font-size:13.5px;line-height:1.72;color:rgba(240,240,245,.85);word-break:break-word}
+.post-date{font-size:11px;color:var(--muted);margin-top:10px}
+.reply-box{margin-top:18px}
+
+/* ── TOP ── */
+.top-wrap{padding:40px 32px;max-width:860px;margin:0 auto}
+.top-head{text-align:center;margin-bottom:36px}
+.top-h{font-family:var(--font-d);font-size:46px;font-weight:800;letter-spacing:-2px}
+.top-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:28px;flex-wrap:wrap}
+.top-tab{background:var(--bg2);border:1px solid var(--border);color:var(--muted);font-family:var(--font-b);font-size:13px;font-weight:500;padding:8px 20px;border-radius:var(--radius-sm);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px}
+.top-tab svg{width:14px;height:14px}
+.top-tab.active{background:rgba(124,106,255,.14);border-color:var(--accent);color:var(--text)}
+.top-list{display:flex;flex-direction:column;gap:8px}
+.top-item{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px 18px;transition:all .15s}
+.top-item:hover{border-color:var(--border2)}
+.top-item.r1{background:linear-gradient(90deg,rgba(255,215,0,.05),var(--bg2));border-color:rgba(255,215,0,.22)}
+.top-item.r2{background:linear-gradient(90deg,rgba(192,192,192,.05),var(--bg2));border-color:rgba(192,192,192,.18)}
+.top-item.r3{background:linear-gradient(90deg,rgba(205,127,50,.05),var(--bg2));border-color:rgba(205,127,50,.18)}
+.top-rank{font-family:var(--font-d);font-size:17px;font-weight:800;width:32px;text-align:center;color:var(--muted)}
+.top-rank.gold{color:#ffd700}.top-rank.silver{color:#c0c0c0}.top-rank.bronze{color:#cd7f32}
+.top-av{width:36px;height:36px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center}
+.top-av svg{width:18px;height:18px;color:var(--muted)}
+.top-name{flex:1;font-weight:500;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.top-sc{font-family:var(--font-d);font-size:20px;font-weight:700;color:var(--accent)}
+.top-gm{font-size:11.5px;color:var(--muted)}
+
+/* ── PROFILE ── */
+.profile-wrap{padding:36px 32px;max-width:840px;margin:0 auto}
+.profile-header-card{display:flex;gap:22px;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:26px;margin-bottom:20px}
+.p-avatar{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.p-avatar svg{width:36px;height:36px;color:#fff}
+.p-info{flex:1}
+.p-name{font-family:var(--font-d);font-size:24px;font-weight:800;margin-bottom:5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.p-email{font-size:12.5px;color:var(--muted)}
+.p-stats{display:flex;gap:22px;margin-top:14px}
+.p-stat-val{font-family:var(--font-d);font-size:22px;font-weight:700;color:var(--accent)}
+.p-stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card-title{font-family:var(--font-d);font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-title svg{width:16px;height:16px;color:var(--accent)}
+.admin-title{font-size:14px;font-weight:700;color:var(--accent2);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.admin-title svg{width:15px;height:15px}
+.pending-item{background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.pending-info{flex:1}
+.pending-name{font-size:13.5px;font-weight:500}
+.pending-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+.pending-actions{display:flex;gap:7px}
+.emoji-grid{display:flex;flex-wrap:wrap;gap:7px}
+.emoji-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:19px;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.emoji-btn:hover{border-color:var(--border2)}
+.emoji-btn.active{border-color:var(--accent);background:rgba(124,106,255,.1)}
+
+/* ── UTILITY ── */
+.hidden{display:none!important}
+.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
+.mt-8{margin-top:8px}.mt-16{margin-top:16px}.mt-24{margin-top:24px}
+.text-muted{color:var(--muted)}.text-sm{font-size:12.5px}.text-center{text-align:center}
+.flex{display:flex}.items-center{align-items:center}.gap-8{gap:8px}.gap-12{gap:12px}.flex-wrap{flex-wrap:wrap}
+.empty-state{text-align:center;padding:52px 0;color:var(--muted)}
+.empty-state svg{width:44px;height:44px;margin-bottom:12px;opacity:.3}
+.w-full{width:100%}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .about-cards{grid-template-columns:1fr}
+  .game-layout{grid-template-columns:1fr}
+  .forum-wrap{grid-template-columns:1fr}
+  .forum-sidebar{display:none}
+  .profile-grid{grid-template-columns:1fr}
+  .top-h{font-size:36px}
+}
+@media(max-width:600px){
+  #navbar{padding:0 14px}
+  .nav-links .nav-btn span{display:none}
+}
+
+/* ── LEAFLET DARK FIX ── */
+.leaflet-container{background:#1a1a26!important}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="navbar">
+    <div class="nav-logo" onclick="showPage('about')">ВИЛЛА<span>ГЕСС</span></div>
+    <div class="nav-links">
+      <button class="nav-btn active" data-page="about">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>О сайте</span>
+      </button>
+      <button class="nav-btn" data-page="game">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span>Игра</span>
+      </button>
+      <button class="nav-btn" data-page="forum">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Форум</span>
+      </button>
+      <button class="nav-btn" data-page="top">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        <span>Топ</span>
+      </button>
+      <button class="nav-btn" data-page="profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Профиль</span>
+      </button>
+    </div>
+    <div class="nav-auth" id="navAuth">
+      <button class="btn-ghost btn-sm" onclick="openLogin()">Войти</button>
+      <button class="btn-primary btn-sm" onclick="openRegister()">Регистрация</button>
+    </div>
+  </nav>
+  <main id="main">
+    <div id="page-about" class="page active"></div>
+    <div id="page-game" class="page"></div>
+    <div id="page-forum" class="page"></div>
+    <div id="page-top" class="page"></div>
+    <div id="page-profile" class="page"></div>
+  </main>
+</div>
+
+<div id="modal-overlay" class="hidden">
+  <div id="modal-box">
+    <button id="modal-close" onclick="closeModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// =============================================
+// CONFIG — замени на свои ключи из supabase.com
+// =============================================
+const SUPABASE_URL = 'https://ejqdhcxubivyskyfnedk.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_AGtrevUR0AQfOVp9S9hzCA_CiuLTaRg';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,         // сессия сохраняется в localStorage
+    autoRefreshToken: true,
+    storageKey: 'villagess-auth'
+  }
+});
+
+const GAME_CENTER = [56.450279, 52.427013];
+const GAME_BOUNDS = [[56.428, 52.395], [56.475, 52.462]];
+
+const ROLES = {
+  user:    { label: 'Игрок',     level: 0, cls: '' },
+  helper:  { label: 'Хелпер',   level: 1, cls: 'role-helper' },
+  mod:     { label: 'Модератор', level: 2, cls: 'role-mod' },
+  admin:   { label: 'Администратор', level: 3, cls: 'role-admin' },
+  curator: { label: 'Куратор',   level: 4, cls: 'role-curator' },
+  zga:     { label: 'ЗГА',       level: 5, cls: 'role-zga' },
+  ga:      { label: 'ГА',        level: 6, cls: 'role-ga' },
+  coder:   { label: 'Кодер',     level: 99, cls: 'role-coder' },
+};
+
+const canMod     = r => (ROLES[r]?.level||0) >= 2;
+const canAdmin   = r => (ROLES[r]?.level||0) >= 3;
+const canRoles   = r => (ROLES[r]?.level||0) >= 5 || r==='coder';
+const canCats    = r => (ROLES[r]?.level||0) >= 5 || r==='coder';
+const canApprove = r => (ROLES[r]?.level||0) >= 3 || r==='coder';
+
+function roleBadge(role) {
+  const r = ROLES[role]; if(!r||!r.cls) return '';
+  if(role==='coder') return `<span class="role-badge role-coder"><span>${r.label}</span></span>`;
+  return `<span class="role-badge ${r.cls}">${r.label}</span>`;
+}
+
+// ── SVG helpers ──
+const SVG = {
+  user:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  map:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>`,
+  pin:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+  chat:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+  star:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  eye:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  team:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  trend:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+  camera: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  check:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`,
+  x:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  trophy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 21 12 17 16 21"/><line x1="12" y1="17" x2="12" y2="11"/><path d="M8 3H5v6c0 3.31 2.69 6 6 6s6-2.69 6-6V3h-3"/><path d="M5 3H2v4c0 2.21 1.34 4 3 4"/><path d="M19 3h3v4c0 2.21-1.34 4-3 4"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  edit:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  plus:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  smoke:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H7a4 4 0 0 1-4-4 4 4 0 0 1 4-4h.5"/><path d="M17 20v-8a3 3 0 0 0-3-3"/><path d="M13 5a2 2 0 1 1 4 0v2a2 2 0 1 0 4 0"/></svg>`,
+  disc:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>`,
+  game:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="15" cy="13" r="1" fill="currentColor"/><circle cx="17" cy="11" r="1" fill="currentColor"/><path d="M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>`,
+  logout: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
+};
+
+// =============================================
+// STATE
+// =============================================
+let curUser = null, curProfile = null;
+
+// =============================================
+// AUTH
+// =============================================
+async function initAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) { curUser = session.user; await fetchProfile(curUser.id); }
+  sb.auth.onAuthStateChange(async (_ev, sess) => {
+    if (sess?.user) { curUser = sess.user; await fetchProfile(curUser.id); }
+    else { curUser = null; curProfile = null; }
+    updateNavAuth();
+    if (curPage === 'profile') renderProfile();
+  });
+  updateNavAuth();
+}
+
+async function fetchProfile(id) {
+  const { data } = await sb.from('profiles').select('*').eq('id', id).single();
+  curProfile = data; return data;
+}
+
+function updateNavAuth() {
+  const el = document.getElementById('navAuth');
+  if(curUser && curProfile) {
+    el.innerHTML = `
+      <span class="text-sm text-muted" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(curProfile.username)}</span>
+      ${roleBadge(curProfile.role)}
+      <button class="btn-ghost btn-sm" onclick="showPage('profile')">${SVG.user}</button>
+      <button class="btn-ghost btn-sm" onclick="doLogout()" title="Выйти">${SVG.logout}</button>
+    `;
+  } else {
+    el.innerHTML = `
+      <button class="btn-ghost btn-sm" onclick="openLogin()">Войти</button>
+      <button class="btn-primary btn-sm" onclick="openRegister()">Регистрация</button>
+    `;
+  }
+}
+
+function openLogin() {
+  openModal(`
+    <h2 style="font-family:var(--font-d);font-size:21px;font-weight:800;margin-bottom:20px">Войти</h2>
+    <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="li-email" type="email" placeholder="you@example.com"/></div>
+    <div class="form-group"><label class="form-label">Пароль</label><input class="form-input" id="li-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+    <button class="btn-primary w-full" style="margin-top:4px" onclick="doLogin()">Войти</button>
+    <p class="text-center text-muted text-sm mt-16">Нет аккаунта? <a href="#" onclick="openRegister()" style="color:var(--accent)">Зарегистрироваться</a></p>
+  `);
+  setTimeout(()=>document.getElementById('li-email')?.focus(),100);
+}
+
+function openRegister() {
+  openModal(`
+    <h2 style="font-family:var(--font-d);font-size:21px;font-weight:800;margin-bottom:20px">Создать аккаунт</h2>
+    <div class="form-group"><label class="form-label">Никнейм</label><input class="form-input" id="rg-name" placeholder="coolplayer99"/></div>
+    <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="rg-email" type="email" placeholder="you@example.com"/></div>
+    <div class="form-group"><label class="form-label">Пароль</label><input class="form-input" id="rg-pass" type="password" placeholder="минимум 8 символов" onkeydown="if(event.key==='Enter')doRegister()"/></div>
+    <button class="btn-primary w-full" style="margin-top:4px" onclick="doRegister()">Создать аккаунт</button>
+    <p class="text-center text-muted text-sm mt-16">Уже есть? <a href="#" onclick="openLogin()" style="color:var(--accent)">Войти</a></p>
+  `);
+  setTimeout(()=>document.getElementById('rg-name')?.focus(),100);
+}
+
+async function doLogin() {
+  const email = v('li-email'), pass = v('li-pass');
+  if(!email||!pass) return toast('Заполни все поля','error');
+  const { error } = await sb.auth.signInWithPassword({email,password:pass});
+  if(error) return toast(error.message,'error');
+  closeModal(); toast('Добро пожаловать!','success');
+}
+
+async function doRegister() {
+  const uname = v('rg-name'), email = v('rg-email'), pass = v('rg-pass');
+  if(!uname||!email||!pass) return toast('Заполни все поля','error');
+  if(pass.length<8) return toast('Пароль минимум 8 символов','error');
+
+  // Check username not taken
+  const { data: existing } = await sb.from('profiles').select('id').eq('username', uname).maybeSingle();
+  if(existing) return toast('Никнейм уже занят','error');
+
+  const siteUrl = window.location.origin + window.location.pathname;
+  const { data, error } = await sb.auth.signUp({
+    email, password: pass,
+    options: {
+      emailRedirectTo: siteUrl,
+      data: { username: uname }
+    }
+  });
+  if(error) return toast(error.message,'error');
+
+  // Create profile — works with or without email confirmation
+  const uid = data?.user?.id;
+  if(uid) {
+    const { error: pe } = await sb.from('profiles').upsert({
+      id: uid, username: uname, role: 'user',
+      avatar_emoji: '🎮', total_score: 0, best_score: 0, games_played: 0
+    }, { onConflict: 'id' });
+    if(pe) console.warn('Profile upsert error:', pe.message);
+  }
+
+  closeModal();
+  if(data?.session) {
+    curUser = data.session.user;
+    await fetchProfile(curUser.id);
+    updateNavAuth();
+    toast('Добро пожаловать, ' + uname + '!', 'success');
+  } else {
+    toast('Аккаунт создан! Проверь email и перейди по ссылке.', 'info');
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut(); curUser=null; curProfile=null;
+  updateNavAuth(); showPage('about'); toast('Вышел из аккаунта','info');
+}
+
+// =============================================
+// ABOUT
+// =============================================
+function renderAbout() {
+  document.getElementById('page-about').innerHTML = `
+    <section class="about-hero">
+      <div class="about-pill">${SVG.map} Геогессор деревни</div>
+      <h1 class="about-title">ВИЛЛА<span class="accent">ГЕСС</span></h1>
+      <p class="about-sub">Угадай, где именно ты находишься в деревне — по фото, по виду из окна, по деталям. Соревнуйся, набирай очки, попадай в топ.</p>
+      <div class="about-btns">
+        <button class="btn-primary" style="padding:12px 28px;font-size:15px" onclick="showPage('game')">${SVG.game} Играть</button>
+        <button class="btn-ghost" style="padding:12px 28px;font-size:15px" onclick="showPage('forum')">${SVG.chat} Форум</button>
+      </div>
+      <div class="about-cards">
+        <div class="about-card">
+          <div class="about-card-icon">${SVG.camera}</div>
+          <div class="about-card-title">Точки от жителей</div>
+          <div class="about-card-text">Любой может предложить свою точку. Лучшие проходят модерацию и попадают в игру.</div>
+        </div>
+        <div class="about-card">
+          <div class="about-card-icon">${SVG.trophy}</div>
+          <div class="about-card-title">Система топа</div>
+          <div class="about-card-text">Рейтинг по лучшему результату, среднему и количеству игр. Войти только с аккаунтом.</div>
+        </div>
+        <div class="about-card">
+          <div class="about-card-icon">${SVG.team}</div>
+          <div class="about-card-title">Живой форум</div>
+          <div class="about-card-text">Обсуждай деревню, делись фотографиями, болтай в курилке. Своя ролевая система.</div>
+        </div>
+      </div>
+      <div class="about-footer" style="margin-top:60px"><hr style="border:none;border-top:1px solid rgba(255,255,255,.08);width:100%;max-width:600px;margin:0 auto 28px"/>
+      <div style="display:flex;gap:24px;justify-content:center;align-items:center;flex-wrap:wrap">
+        <a href="https://t.me/macanxyecocina" target="_blank" style="display:inline-flex;align-items:center;gap:8px;color:var(--muted);text-decoration:none;font-size:13.5px;transition:color .18s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--muted)'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="#2AABEE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="#2AABEE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Мы в Телеграм
+        </a>
+        <span style="color:rgba(255,255,255,.12)">·</span>
+        <a href="https://t.me/fucckeddreambot" target="_blank" style="display:inline-flex;align-items:center;gap:8px;color:var(--muted);text-decoration:none;font-size:13.5px;transition:color .18s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--muted)'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Техническая поддержка
+        </a>
+      </div>
+      <div style="margin-top:18px;font-size:11.5px;color:rgba(255,255,255,.2)">ВиллаГесс v1.0</div></div>
+    </section>
+  `;
+}
+
+// =============================================
+// GAME
+// =============================================
+let G = { active:false, round:1, total:5, score:0, pts:[], cur:null, marker:null, guess:null, gmap:null, results:[] };
+
+function renderGame() {
+  document.getElementById('page-game').innerHTML = `
+    <div class="game-wrap" style="display:flex;flex-direction:column;align-items:center;min-height:calc(100vh - 58px);justify-content:center;padding-top:20px">
+      <div class="page-heading" style="text-align:center;margin-bottom:4px">Геогессор</div>
+      <div class="page-sub" style="text-align:center;margin-bottom:24px">Угадай место на карте деревни по фотографии</div>
+      <div id="gs-start" style="width:100%;max-width:900px">
+        <div class="card game-start-card">
+          <div class="game-start-icon">${SVG.map}</div>
+          <h2 style="font-family:var(--font-d);font-size:22px;font-weight:800;margin-bottom:8px">Начать игру</h2>
+          <p class="text-muted text-sm" style="margin-bottom:22px">Выбери количество раундов. Нажми на карту — поставь метку.</p>
+          <div class="round-options">
+            <button class="round-opt" onclick="selRounds(3,this)">3 раунда</button>
+            <button class="round-opt sel" onclick="selRounds(5,this)">5 раундов</button>
+            <button class="round-opt" onclick="selRounds(10,this)">10 раундов</button>
+          </div>
+          <button class="btn-primary w-full" style="padding:14px;font-size:15px;letter-spacing:.02em" onclick="startGame()">Начать игру</button>
+          ${!curUser?`<p class="text-muted text-sm" style="margin-top:12px">Войди, чтобы результаты шли в топ</p>`:''}
+        </div>
+        <div class="suggest-section" style="width:100%;max-width:500px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <span style="font-family:var(--font-d);font-size:17px;font-weight:700">Предложить точку</span>
+            ${curUser?`<button class="btn-ghost btn-sm" onclick="openSuggest()">${SVG.plus} Добавить</button>`:`<span class="text-muted text-sm">Войди, чтобы добавить</span>`}
+          </div>
+          <div id="pending-wrap"></div>
+        </div>
+      </div>
+      <div id="gs-active" style="display:none">
+        <div class="game-topbar">
+          <div>
+            <div class="round-label">Раунд <span id="g-round">1</span> / <span id="g-total">5</span></div>
+            <div class="round-score" id="g-score">0 pts</div>
+          </div>
+          <button class="btn-ghost btn-sm" onclick="endGame()" style="margin-left:auto">Завершить</button>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="g-progress" style="width:0%"></div></div>
+        <div class="game-layout">
+          <div id="map-photo"></div>
+          <div class="game-sidebar">
+            <div class="card" style="padding:14px">
+              <div class="text-muted text-sm" style="margin-bottom:8px">Поставь метку на карте</div>
+              <div class="guess-map-wrap" id="guess-map-div"></div>
+              <div class="guess-coords" id="g-coords">Нажми на карту ↑</div>
+            </div>
+            <div class="card" style="padding:12px">
+              <div id="hint-box" class="hint-text"></div>
+            </div>
+            <button class="btn-primary w-full" style="padding:13px" id="g-confirm" onclick="confirmGuess()" disabled>Подтвердить</button>
+          </div>
+        </div>
+      </div>
+      <div id="gs-result" style="display:none"></div>
+    </div>
+  `;
+  if(curUser && canApprove(curProfile?.role)) loadPending();
+}
+
+function selRounds(n, btn) {
+  G.total = n;
+  document.querySelectorAll('.round-opt').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+async function startGame() {
+  const { data } = await sb.from('game_points').select('*').eq('approved',true);
+  if(!data||data.length < G.total) return toast('Недостаточно точек в базе данных','error');
+  G.pts = data.sort(()=>Math.random()-.5).slice(0,G.total);
+  G.round=1; G.score=0; G.results=[]; G.guess=null; G.marker=null;
+  document.getElementById('gs-start').style.display='none';
+  document.getElementById('gs-active').style.display='block';
+  await initGuessMap(); loadRound();
+}
+
+async function initGuessMap() {
+  if(G.gmap){G.gmap.remove();G.gmap=null;}
+  G.gmap = L.map('guess-map-div',{center:GAME_CENTER,zoom:14,zoomControl:true,attributionControl:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(G.gmap);
+  const bounds = L.latLngBounds(GAME_BOUNDS[0],GAME_BOUNDS[1]);
+  G.gmap.setMaxBounds(bounds.pad(.4));
+  G.gmap.on('click',e=>{
+    G.guess=e.latlng;
+    if(G.marker)G.marker.remove();
+    G.marker=L.marker(e.latlng,{icon:L.divIcon({html:'<div style="width:14px;height:14px;background:var(--accent);border:2px solid #fff;border-radius:50%;box-shadow:0 0 12px rgba(124,106,255,.9)"></div>',iconSize:[14,14],iconAnchor:[7,7],className:''})}).addTo(G.gmap);
+    document.getElementById('g-coords').textContent=`${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+    document.getElementById('g-confirm').disabled=false;
+  });
+}
+
+function loadRound() {
+  G.cur = G.pts[G.round-1]; G.guess=null;
+  if(G.marker){G.marker.remove();G.marker=null;}
+  document.getElementById('g-confirm').disabled=true;
+  document.getElementById('g-coords').textContent='Нажми на карту ↑';
+  document.getElementById('g-round').textContent=G.round;
+  document.getElementById('g-total').textContent=G.total;
+  document.getElementById('g-score').textContent=G.score+' pts';
+  document.getElementById('g-progress').style.width=((G.round-1)/G.total*100)+'%';
+  const ph = document.getElementById('map-photo');
+  if(G.cur.photo_url) ph.innerHTML=`<img src="${G.cur.photo_url}" alt="point"/>`;
+  else ph.innerHTML=`<div class="no-photo-msg">${SVG.camera}<span>Фото не добавлено</span><span class="text-sm">${esc(G.cur.name)}</span></div>`;
+  const hb = document.getElementById('hint-box');
+  if(G.cur.hint){hb.textContent='💡 '+G.cur.hint;hb.style.display='block';}
+  else hb.style.display='none';
+}
+
+function confirmGuess() {
+  if(!G.guess) return;
+  const actual = L.latLng(G.cur.lat, G.cur.lng);
+  const dist = Math.round(actual.distanceTo(G.guess));
+  const pts = Math.max(0, Math.round(5000 - dist*10));
+  G.score += pts; G.results.push({round:G.round,dist,score:pts});
+  L.marker([actual.lat,actual.lng],{icon:L.divIcon({html:'<div style="width:14px;height:14px;background:#ff4f7a;border:2px solid #fff;border-radius:50%"></div>',iconSize:[14,14],iconAnchor:[7,7],className:''})}).addTo(G.gmap);
+  L.polyline([G.guess,actual],{color:'#7c6aff',weight:2,dashArray:'5'}).addTo(G.gmap);
+  document.getElementById('g-confirm').disabled=true;
+  document.getElementById('g-score').textContent=G.score+' pts';
+  const emoji = dist<50?'🎯':dist<200?'🔥':dist<500?'👌':'😬';
+  openModal(`
+    <div style="text-align:center">
+      <div style="font-size:52px;margin-bottom:10px">${emoji}</div>
+      <h2 style="font-family:var(--font-d);font-size:28px;font-weight:800;margin-bottom:4px">+${pts} очков</h2>
+      <p class="text-muted" style="margin-bottom:24px">${dist<50?'Точное попадание!':dist<200?'Отлично!':dist<500?'Неплохо':'Промах'} · ${dist} м от цели</p>
+      <button class="btn-primary w-full" style="padding:12px" onclick="nextRound()">${G.round<G.total?'Следующий раунд →':'Результаты'}</button>
+    </div>
+  `);
+}
+
+function nextRound() {
+  closeModal();
+  if(G.round>=G.total){showFinalResults();return;}
+  G.round++; loadRound();
+}
+
+async function showFinalResults() {
+  document.getElementById('gs-active').style.display='none';
+  if(curUser && curProfile) {
+    await sb.from('game_scores').insert({user_id:curUser.id,score:G.score,rounds:G.total,created_at:new Date().toISOString()});
+    const newTotal=(curProfile.total_score||0)+G.score, newGames=(curProfile.games_played||0)+1, newBest=Math.max(curProfile.best_score||0,G.score);
+    await sb.from('profiles').update({total_score:newTotal,games_played:newGames,best_score:newBest}).eq('id',curUser.id);
+    curProfile={...curProfile,total_score:newTotal,games_played:newGames,best_score:newBest};
+  }
+  document.getElementById('gs-result').style.display='block';
+  document.getElementById('gs-result').innerHTML=`
+    <div class="game-result-screen">
+      <div class="card" style="text-align:center;padding:40px 32px">
+        <div style="width:64px;height:64px;background:rgba(124,106,255,.1);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">${SVG.trophy}</div>
+        <div style="font-family:var(--font-d);font-size:42px;font-weight:800;letter-spacing:-1px">${G.score}</div>
+        <p class="text-muted" style="margin-bottom:26px">очков из ${G.total*5000} возможных</p>
+        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:14px;margin-bottom:22px;text-align:left">
+          ${G.results.map(r=>`
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+              <span class="text-muted">Раунд ${r.round}</span><span>${r.dist} м</span><span style="color:var(--accent);font-weight:600">+${r.score}</span>
+            </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <button class="btn-primary" onclick="playAgain()">Ещё раз</button>
+          <button class="btn-ghost" onclick="showPage('top')">Топ игроков</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function playAgain() {
+  document.getElementById('gs-result').style.display='none';
+  document.getElementById('gs-start').style.display='block';
+  if(G.gmap){G.gmap.remove();G.gmap=null;}
+}
+
+function endGame() {
+  if(!confirm('Закончить игру?'))return;
+  document.getElementById('gs-active').style.display='none';
+  document.getElementById('gs-start').style.display='block';
+  if(G.gmap){G.gmap.remove();G.gmap=null;}
+}
+
+function openSuggest() {
+  if(!curUser)return openLogin();
+  openModal(`
+    <h2 style="font-family:var(--font-d);font-size:20px;font-weight:800;margin-bottom:18px">Предложить точку</h2>
+    <div class="form-group"><label class="form-label">Название</label><input class="form-input" id="sp-n" placeholder="Старый колодец"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label class="form-label">Широта</label><input class="form-input" id="sp-lat" type="number" step="0.000001" placeholder="56.450..."/></div>
+      <div class="form-group"><label class="form-label">Долгота</label><input class="form-input" id="sp-lng" type="number" step="0.000001" placeholder="52.427..."/></div>
+    </div>
+    <div class="form-group"><label class="form-label">Подсказка</label><input class="form-input" id="sp-h" placeholder="Рядом со школой..."/></div>
+    <div class="form-group"><label class="form-label">Ссылка на фото</label><input class="form-input" id="sp-p" placeholder="https://..."/></div>
+    <button class="btn-primary w-full" style="margin-top:6px" onclick="submitSuggest()">Отправить на проверку</button>
+  `);
+}
+
+async function submitSuggest() {
+  const name=v('sp-n'),lat=parseFloat(v('sp-lat')),lng=parseFloat(v('sp-lng')),hint=v('sp-h'),photo=v('sp-p');
+  if(!name||isNaN(lat)||isNaN(lng))return toast('Заполни обязательные поля','error');
+  const {error}=await sb.from('game_points').insert({name,lat,lng,hint:hint||null,photo_url:photo||null,approved:false,submitted_by:curUser.id,created_at:new Date().toISOString()});
+  if(error)return toast('Ошибка: '+error.message,'error');
+  closeModal(); toast('Точка отправлена на проверку!','success');
+}
+
+async function loadPending() {
+  const {data}=await sb.from('game_points').select('*,profiles(username)').eq('approved',false);
+  const el=document.getElementById('pending-wrap'); if(!el)return;
+  if(!data||!data.length){el.innerHTML='<p class="text-muted text-sm">Нет точек на проверке</p>';return;}
+  el.innerHTML=`<p class="text-sm text-muted" style="margin-bottom:10px">Точки на проверке (видно модераторам)</p>`+
+    data.map(p=>`<div class="pending-item">
+      <div class="pending-info"><div class="pending-name">${esc(p.name)}</div><div class="pending-meta">${p.lat}, ${p.lng} · от ${p.profiles?.username||'?'}</div></div>
+      <div class="pending-actions">
+        <button class="btn-green btn-sm" onclick="approvePoint('${p.id}')">${SVG.check}</button>
+        <button class="btn-danger btn-sm" onclick="rejectPoint('${p.id}')">${SVG.x}</button>
+      </div>
+    </div>`).join('');
+}
+
+async function approvePoint(id) {
+  await sb.from('game_points').update({approved:true}).eq('id',id);
+  toast('Точка принята','success'); loadPending();
+}
+async function rejectPoint(id) {
+  await sb.from('game_points').delete().eq('id',id);
+  toast('Точка удалена','info'); loadPending();
+}
+
+// =============================================
+// FORUM
+// =============================================
+let F = { cats:[], cat:null, thread:null };
+const DEFAULT_CATS = [{id:'lounge',name:'Курилка'},{id:'discuss',name:'Обсуждение'}];
+
+async function renderForum() {
+  document.getElementById('page-forum').innerHTML=`
+    <div class="forum-wrap">
+      <aside class="forum-sidebar">
+        <div class="sidebar-label">Разделы</div>
+        <div id="f-cats"></div>
+        ${curUser&&canCats(curProfile?.role)?`<button class="cat-btn" style="color:var(--accent);margin-top:6px" onclick="openAddCat()">${SVG.plus} Новый раздел</button>`:''}
+      </aside>
+      <div class="forum-main">
+        <div class="forum-topbar">
+          <div class="forum-h" id="f-title">Форум</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost btn-sm hidden" id="f-back" onclick="forumList()">← Назад</button>
+            ${curUser?`<button class="btn-primary btn-sm" id="f-new" onclick="openNewThread()">${SVG.plus} Новая тема</button>`:''}
+          </div>
+        </div>
+        <div id="f-body"></div>
+      </div>
+    </div>`;
+  await loadCats();
+}
+
+async function loadCats() {
+  let {data}=await sb.from('forum_categories').select('*').order('created_at');
+  if(!data||!data.length){
+    await sb.from('forum_categories').insert(DEFAULT_CATS.map(c=>({id:c.id,name:c.name})));
+    data=DEFAULT_CATS;
+  }
+  F.cats=data; renderCats();
+  if(!F.cat){F.cat=data[0];forumList();}
+}
+
+function renderCats() {
+  const el=document.getElementById('f-cats'); if(!el)return;
+  el.innerHTML=F.cats.map(c=>`
+    <button class="cat-btn ${F.cat?.id===c.id?'active':''}" onclick="selCat('${c.id}')">
+      ${c.id==='lounge'?SVG.smoke:SVG.disc} ${esc(c.name)}
+    </button>`).join('');
+}
+
+function selCat(id) {
+  F.cat=F.cats.find(c=>c.id===id); F.thread=null; renderCats(); forumList();
+}
+
+async function forumList() {
+  F.thread=null;
+  const back=document.getElementById('f-back'); if(back)back.classList.add('hidden');
+  const nb=document.getElementById('f-new'); if(nb)nb.classList.remove('hidden');
+  document.getElementById('f-title').textContent=F.cat?.name||'Форум';
+  const {data}=await sb.from('forum_threads').select('*,profiles(username,role)').eq('category_id',F.cat?.id).order('created_at',{ascending:false});
+  const body=document.getElementById('f-body');
+  if(!data||!data.length){
+    body.innerHTML=`<div class="empty-state">${SVG.chat}<p>Тут пусто — создай первую тему!</p></div>`; return;
+  }
+  body.innerHTML=`<div class="thread-list">`+data.map(t=>`
+    <div class="thread-item" onclick="openThread('${t.id}')">
+      <div class="t-avatar">${SVG.user}</div>
+      <div class="t-info">
+        <div class="t-title">${esc(t.title)}</div>
+        <div class="t-meta">${esc(t.profiles?.username||'?')} ${roleBadge(t.profiles?.role)} · ${timeAgo(t.created_at)}</div>
+      </div>
+      <div class="t-stats">
+        <div class="t-stat">${SVG.chat}<span>${t.reply_count||0}</span></div>
+        <div class="t-stat">${SVG.eye}<span>${t.views||0}</span></div>
+      </div>
+    </div>`).join('')+`</div>`;
+}
+
+async function openThread(id) {
+  document.getElementById('f-back')?.classList.remove('hidden');
+  document.getElementById('f-new')?.classList.add('hidden');
+  await sb.rpc('increment_thread_views',{thread_id:id}).catch(()=>{});
+  const {data:t}=await sb.from('forum_threads').select('*,profiles(username,role)').eq('id',id).single();
+  const {data:posts}=await sb.from('forum_posts').select('*,profiles(username,role)').eq('thread_id',id).order('created_at');
+  F.thread=t; document.getElementById('f-title').textContent=t?.title||'';
+  const body=document.getElementById('f-body');
+  body.innerHTML=`<div class="post-list">
+    ${renderPost(t,true)}
+    ${(posts||[]).map(p=>renderPost(p,false)).join('')}
+  </div>
+  ${curUser?`<div class="reply-box card"><div class="form-group"><label class="form-label">Ответить</label><textarea class="form-input" id="reply-txt" rows="4" placeholder="Напиши ответ..."></textarea></div><button class="btn-primary" onclick="submitReply('${id}')">Отправить</button></div>`
+  :`<p class="text-muted text-sm text-center" style="padding:20px 0">Войди, чтобы ответить</p>`}`;
+}
+
+function renderPost(p,isOP) {
+  const pr=p.profiles||{};
+  return `<div class="post-item">
+    <div class="post-author">
+      <div class="post-av">${SVG.user}</div>
+      <div class="post-uname">${esc(pr.username||'?')}</div>
+      ${roleBadge(pr.role)}
+      ${isOP?`<div class="text-sm text-muted" style="margin-top:5px">Автор</div>`:''}
+    </div>
+    <div>
+      <div class="post-body">${esc(isOP?(p.body||p.content||''):p.content)}</div>
+      <div class="post-date">${timeAgo(p.created_at)}</div>
+      ${canMod(curProfile?.role)&&!isOP?`<div style="margin-top:10px"><button class="btn-danger btn-sm" onclick="delPost('${p.id}')">Удалить</button></div>`:''}
+    </div>
+  </div>`;
+}
+
+async function submitReply(tid) {
+  const txt=v('reply-txt'); if(!txt)return toast('Напиши что-нибудь','error');
+  const {error}=await sb.from('forum_posts').insert({thread_id:tid,user_id:curUser.id,content:txt,created_at:new Date().toISOString()});
+  if(error)return toast('Ошибка: '+error.message,'error');
+  await sb.rpc('increment_reply_count',{thread_id:tid}).catch(()=>{});
+  toast('Ответ добавлен','success'); openThread(tid);
+}
+
+async function delPost(id) {
+  if(!confirm('Удалить сообщение?'))return;
+  await sb.from('forum_posts').delete().eq('id',id);
+  toast('Удалено','info');
+  if(F.thread)openThread(F.thread.id);
+}
+
+function openNewThread() {
+  if(!curUser)return openLogin();
+  openModal(`
+    <h2 style="font-family:var(--font-d);font-size:20px;font-weight:800;margin-bottom:18px">Новая тема</h2>
+    <div class="form-group"><label class="form-label">Заголовок</label><input class="form-input" id="nt-title" placeholder="О чём?"/></div>
+    <div class="form-group"><label class="form-label">Текст</label><textarea class="form-input" id="nt-body" rows="5" placeholder="Расскажи подробнее..."></textarea></div>
+    <button class="btn-primary w-full" style="margin-top:6px" onclick="submitThread()">Создать тему</button>
+  `);
+}
+
+async function submitThread() {
+  const title=v('nt-title'),body=v('nt-body');
+  if(!title||!body)return toast('Заполни все поля','error');
+  const {error}=await sb.from('forum_threads').insert({title,body,category_id:F.cat?.id,user_id:curUser.id,reply_count:0,views:0,created_at:new Date().toISOString()});
+  if(error)return toast('Ошибка: '+error.message,'error');
+  closeModal(); toast('Тема создана!','success'); forumList();
+}
+
+function openAddCat() {
+  openModal(`
+    <h2 style="font-family:var(--font-d);font-size:20px;font-weight:800;margin-bottom:18px">Новый раздел</h2>
+    <div class="form-group"><label class="form-label">ID (slug)</label><input class="form-input" id="c-id" placeholder="general"/></div>
+    <div class="form-group"><label class="form-label">Название</label><input class="form-input" id="c-name" placeholder="Общее"/></div>
+    <button class="btn-primary w-full" style="margin-top:6px" onclick="submitCat()">Создать</button>
+  `);
+}
+
+async function submitCat() {
+  const id=v('c-id').toLowerCase().replace(/\s+/g,'_'),name=v('c-name');
+  if(!id||!name)return toast('Заполни поля','error');
+  const {error}=await sb.from('forum_categories').insert({id,name});
+  if(error)return toast('Ошибка: '+error.message,'error');
+  closeModal(); toast('Раздел создан','success'); loadCats();
+}
+
+// =============================================
+// TOP
+// =============================================
+let topMode='best';
+async function renderTop() {
+  document.getElementById('page-top').innerHTML=`
+    <div class="top-wrap">
+      <div class="top-head"><div class="top-h">Топ</div><div class="text-muted" style="margin-top:6px">Рейтинг лучших игроков</div></div>
+      <div class="top-tabs">
+        <button class="top-tab ${topMode==='best'?'active':''}" onclick="switchTop('best',this)">${SVG.trophy} Лучший результат</button>
+        <button class="top-tab ${topMode==='avg'?'active':''}" onclick="switchTop('avg',this)">${SVG.trend} Средний</button>
+        <button class="top-tab ${topMode==='games'?'active':''}" onclick="switchTop('games',this)">${SVG.game} Игр сыграно</button>
+      </div>
+      <div id="top-body"><div class="empty-state">${SVG.trend}<p>Загрузка...</p></div></div>
+    </div>`;
+  loadTop();
+}
+
+function switchTop(mode,btn) {
+  topMode=mode;
+  document.querySelectorAll('.top-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); loadTop();
+}
+
+async function loadTop() {
+  const {data}=await sb.from('profiles').select('id,username,role,best_score,total_score,games_played').not('games_played','eq',0).order('best_score',{ascending:false}).limit(50);
+  const el=document.getElementById('top-body'); if(!el)return;
+  if(!data||!data.length){el.innerHTML=`<div class="empty-state">${SVG.trophy}<p>Пока никто не играл. Будь первым!</p></div>`;return;}
+  let list=[...data];
+  if(topMode==='avg') list.sort((a,b)=>((b.total_score||0)/(b.games_played||1))-((a.total_score||0)/(a.games_played||1)));
+  else if(topMode==='games') list.sort((a,b)=>(b.games_played||0)-(a.games_played||0));
+  const rk=(i)=>i===0?'gold':i===1?'silver':i===2?'bronze':'';
+  const rkn=(i)=>i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
+  const sc=(p)=>topMode==='avg'?Math.round((p.total_score||0)/(p.games_played||1))+' avg':topMode==='games'?p.games_played+' игр':(p.best_score||0)+' pts';
+  el.innerHTML=`<div class="top-list">`+list.map((p,i)=>`
+    <div class="top-item ${i<3?'r'+(i+1):''}">
+      <div class="top-rank ${rk(i)}">${rkn(i)}</div>
+      <div class="top-av">${SVG.user}</div>
+      <div class="top-name">${esc(p.username)} ${roleBadge(p.role)}</div>
+      <div style="text-align:right">
+        <div class="top-sc">${sc(p)}</div>
+        <div class="top-gm">${p.games_played} игр</div>
+      </div>
+    </div>`).join('')+`</div>`;
+}
+
+// =============================================
+// PROFILE
+// =============================================
+async function renderProfile() {
+  const page=document.getElementById('page-profile');
+  if(!curUser||!curProfile){
+    page.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 58px)">
+      <div class="card" style="text-align:center;padding:48px 40px;max-width:360px">
+        <div style="width:60px;height:60px;background:rgba(124,106,255,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">${SVG.user}</div>
+        <h2 style="font-family:var(--font-d);font-size:22px;font-weight:800;margin-bottom:9px">Войди в аккаунт</h2>
+        <p class="text-muted text-sm" style="margin-bottom:22px">Для просмотра профиля нужна авторизация</p>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button class="btn-primary" onclick="openLogin()">Войти</button>
+          <button class="btn-ghost" onclick="openRegister()">Регистрация</button>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+  const p=curProfile;
+  page.innerHTML=`
+    <div class="profile-wrap">
+      <div class="profile-header-card">
+        <div class="p-avatar">${SVG.user}</div>
+        <div class="p-info">
+          <div class="p-name">${esc(p.username)} ${roleBadge(p.role)}</div>
+          <div class="p-email">${curUser.email}</div>
+          <div class="p-stats">
+            <div><div class="p-stat-val">${p.games_played||0}</div><div class="p-stat-label">Игр</div></div>
+            <div><div class="p-stat-val">${p.best_score||0}</div><div class="p-stat-label">Лучший</div></div>
+            <div><div class="p-stat-val">${p.total_score||0}</div><div class="p-stat-label">Всего</div></div>
+          </div>
+        </div>
+        <button class="btn-ghost btn-sm" onclick="openEditProfile()">${SVG.edit} Изменить</button>
+      </div>
+      <div class="profile-grid">
+        <div class="card">
+          <div class="card-title">${SVG.game} Последние игры</div>
+          <div id="p-games"><div class="text-muted text-sm">Загрузка...</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">${SVG.user} Аватар</div>
+          <div class="emoji-grid">
+            ${'🎮 🏠 🌲 🐾 ⭐ 🔥 🎯 🦁 🐺 🌙 💎 🎪'.split(' ').map(e=>`<button class="emoji-btn ${p.avatar_emoji===e?'active':''}" onclick="setEmoji('${e}')">${e}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+      ${canRoles(p.role)?renderRolePanel():''}
+      ${canApprove(p.role)?renderAdminPanelHTML():''}
+    </div>`;
+  loadRecentGames();
+  if(canApprove(p.role))loadAdminPending();
+}
+
+function renderRolePanel() {
+  return `<div class="mt-24"><div class="card">
+    <div class="admin-title">${SVG.shield} Управление ролями</div>
+    <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Никнейм</label><input class="form-input" id="r-user" placeholder="username"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Роль</label><select class="form-input" id="r-role">
+        ${Object.entries(ROLES).filter(([k])=>k!=='coder').map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}
+      </select></div>
+      <button class="btn-primary" onclick="assignRole()">Выдать</button>
+    </div>
+  </div></div>`;
+}
+
+function renderAdminPanelHTML() {
+  return `<div class="mt-16"><div class="card">
+    <div class="admin-title">${SVG.map} Точки на проверке</div>
+    <div id="p-pending">Загрузка...</div>
+  </div></div>`;
+}
+
+async function loadRecentGames() {
+  const {data}=await sb.from('game_scores').select('*').eq('user_id',curUser.id).order('created_at',{ascending:false}).limit(5);
+  const el=document.getElementById('p-games'); if(!el)return;
+  if(!data||!data.length){el.innerHTML='<p class="text-muted text-sm">Нет сыгранных игр</p>';return;}
+  el.innerHTML=data.map(g=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+    <span class="text-muted">${new Date(g.created_at).toLocaleDateString('ru-RU')}</span>
+    <span>${g.rounds} ран.</span>
+    <span style="color:var(--accent);font-weight:600">${g.score} pts</span>
+  </div>`).join('');
+}
+
+async function loadAdminPending() {
+  const {data}=await sb.from('game_points').select('*,profiles(username)').eq('approved',false);
+  const el=document.getElementById('p-pending'); if(!el)return;
+  if(!data||!data.length){el.innerHTML='<p class="text-muted text-sm">Нет точек на проверке ✅</p>';return;}
+  el.innerHTML=data.map(p=>`<div class="pending-item">
+    <div class="pending-info"><div class="pending-name">${esc(p.name)}</div><div class="pending-meta">${p.lat}, ${p.lng} · ${p.profiles?.username||'?'}${p.hint?' · '+p.hint:''}</div></div>
+    <div class="pending-actions">
+      <button class="btn-green btn-sm" onclick="approvePointP('${p.id}')">${SVG.check}</button>
+      <button class="btn-danger btn-sm" onclick="rejectPointP('${p.id}')">${SVG.x}</button>
+    </div>
+  </div>`).join('');
+}
+
+async function approvePointP(id){await sb.from('game_points').update({approved:true}).eq('id',id);toast('Принята','success');loadAdminPending();}
+async function rejectPointP(id){await sb.from('game_points').delete().eq('id',id);toast('Удалена','info');loadAdminPending();}
+
+async function assignRole() {
+  const uname=v('r-user'),role=v('r-role'); if(!uname)return toast('Введи никнейм','error');
+  const {data:target}=await sb.from('profiles').select('id,role').eq('username',uname).single();
+  if(!target)return toast('Пользователь не найден','error');
+  const myLvl=ROLES[curProfile.role]?.level||0, tgtLvl=ROLES[target.role]?.level||0, newLvl=ROLES[role]?.level||0;
+  if(curProfile.role!=='coder'&&newLvl>=myLvl)return toast('Нельзя выдать роль ≥ своей','error');
+  if(curProfile.role!=='coder'&&tgtLvl>=myLvl)return toast('Нельзя изменить роль равного','error');
+  await sb.from('profiles').update({role}).eq('id',target.id);
+  toast(`Роль ${ROLES[role].label} выдана ${uname}`,'success');
+}
+
+async function setEmoji(e) {
+  await sb.from('profiles').update({avatar_emoji:e}).eq('id',curUser.id);
+  curProfile.avatar_emoji=e; toast('Аватар обновлён','success'); renderProfile();
+}
+
+function openEditProfile() {
+  openModal(`
+    <h2 style="font-family:var(--font-d);font-size:20px;font-weight:800;margin-bottom:18px">Редактировать профиль</h2>
+    <div class="form-group"><label class="form-label">Никнейм</label><input class="form-input" id="ep-name" value="${esc(curProfile.username||'')}"/></div>
+    <button class="btn-primary w-full" style="margin-top:4px" onclick="saveProfile()">Сохранить</button>
+  `);
+}
+
+async function saveProfile() {
+  const uname=v('ep-name'); if(!uname)return toast('Никнейм не может быть пустым','error');
+  const {error}=await sb.from('profiles').update({username:uname}).eq('id',curUser.id);
+  if(error)return toast('Ошибка: '+error.message,'error');
+  curProfile.username=uname; closeModal(); updateNavAuth(); renderProfile(); toast('Профиль обновлён','success');
+}
+
+// =============================================
+// CORE: ROUTING / MODAL / TOAST / UTILS
+// =============================================
+let curPage='about';
+const PAGES={about:renderAbout,game:renderGame,forum:renderForum,top:renderTop,profile:renderProfile};
+
+function showPage(name) {
+  if(!PAGES[name])return;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name)?.classList.add('active');
+  document.querySelector(`.nav-btn[data-page="${name}"]`)?.classList.add('active');
+  curPage=name; PAGES[name](); window.scrollTo(0,0);
+}
+
+function openModal(html) {
+  document.getElementById('modal-content').innerHTML=html;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+  document.getElementById('modal-content').innerHTML='';
+}
+
+function toast(msg,type='info') {
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  const icons={success:SVG.check,error:SVG.x,info:SVG.star};
+  el.innerHTML=`<span style="flex-shrink:0;opacity:.7;display:flex">${icons[type]||''}</span><span>${msg}</span>`;
+  el.querySelector('svg').style.cssText='width:14px;height:14px';
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>el.remove(),3500);
+}
+
+function v(id){const el=document.getElementById(id);return el?(el.value||'').trim():'';}
+function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function timeAgo(iso){
+  if(!iso)return '';
+  const d=new Date(iso),diff=(Date.now()-d)/1000;
+  if(diff<60)return 'только что';
+  if(diff<3600)return Math.floor(diff/60)+' мин назад';
+  if(diff<86400)return Math.floor(diff/3600)+' ч назад';
+  return d.toLocaleDateString('ru-RU');
+}
+
+// close modal on overlay click
+document.getElementById('modal-overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('modal-overlay'))closeModal();
+});
+
+// nav buttons
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>showPage(btn.dataset.page));
+});
+
+// ── BOOT ──
+(async()=>{ await initAuth(); showPage('about'); })();
+</script>
+</body>
+</html>
