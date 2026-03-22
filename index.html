@@ -83,17 +83,83 @@ select.form-input{cursor:pointer}
 .toast.info{border-left:3px solid var(--accent)}
 @keyframes slideIn{from{transform:translateX(18px);opacity:0}to{transform:translateX(0);opacity:1}}
 
-/* ── ROLE BADGES ── */
-.role-badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.07em}
-.role-helper{background:rgba(91,200,245,.13);color:#5bc8f5;border:1px solid rgba(91,200,245,.28)}
-.role-mod{background:rgba(58,123,213,.13);color:#3a7bd5;border:1px solid rgba(58,123,213,.28)}
-.role-admin{background:rgba(26,86,219,.13);color:#5b8aff;border:1px solid rgba(26,86,219,.28)}
-.role-curator{background:rgba(155,89,182,.13);color:#b97fe0;border:1px solid rgba(155,89,182,.28)}
-.role-zga{background:rgba(168,224,99,.1);color:#a8e063;border:1px solid rgba(168,224,99,.28)}
-.role-ga{background:rgba(39,174,96,.1);color:#2ecc71;border:1px solid rgba(39,174,96,.28)}
-.role-coder{background:linear-gradient(90deg,rgba(255,79,122,.12),rgba(124,106,255,.12));border:1px solid rgba(255,79,122,.35);font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;animation:rgbBorder 3s linear infinite}
-.role-coder span{background:linear-gradient(90deg,#ff4f7a,#ff9f43,#7c6aff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-@keyframes rgbBorder{0%{border-color:rgba(255,79,122,.5)}33%{border-color:rgba(124,106,255,.5)}66%{border-color:rgba(255,159,67,.5)}100%{border-color:rgba(255,79,122,.5)}}
+/* ── ROLE BADGES — banner style ── */
+.role-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;font-weight:800;
+  padding:3px 10px 3px 8px;
+  border-radius:6px;
+  text-transform:uppercase;letter-spacing:.08em;
+  position:relative;overflow:hidden;
+  white-space:nowrap;flex-shrink:0;
+}
+.role-badge::before{
+  content:'';position:absolute;inset:0;
+  background:inherit;filter:brightness(1.15);
+  opacity:0;transition:opacity .2s;
+}
+.role-badge:hover::before{opacity:1}
+/* shield icon shared */
+.role-badge svg{width:11px;height:11px;flex-shrink:0}
+
+.role-helper{
+  background:linear-gradient(135deg,#1a4a5a,#0d3040);
+  color:#5bc8f5;border:1px solid rgba(91,200,245,.35);
+  box-shadow:0 2px 8px rgba(91,200,245,.15);
+}
+.role-mod{
+  background:linear-gradient(135deg,#1a2e50,#0f1e38);
+  color:#6ba3f5;border:1px solid rgba(58,123,213,.4);
+  box-shadow:0 2px 8px rgba(58,123,213,.18);
+}
+.role-admin{
+  background:linear-gradient(135deg,#15255e,#0a1540);
+  color:#7b9fff;border:1px solid rgba(26,86,219,.45);
+  box-shadow:0 2px 8px rgba(26,86,219,.22);
+}
+.role-curator{
+  background:linear-gradient(135deg,#2d1a4a,#1a0f30);
+  color:#c98ff0;border:1px solid rgba(155,89,182,.4);
+  box-shadow:0 2px 8px rgba(155,89,182,.2);
+}
+.role-zga{
+  background:linear-gradient(135deg,#1e3510,#122008);
+  color:#a8e063;border:1px solid rgba(168,224,99,.35);
+  box-shadow:0 2px 8px rgba(168,224,99,.15);
+}
+.role-ga{
+  background:linear-gradient(135deg,#0d2e1a,#071a0e);
+  color:#2ecc71;border:1px solid rgba(39,174,96,.38);
+  box-shadow:0 2px 8px rgba(39,174,96,.18);
+}
+.role-coder{
+  padding:3px 10px 3px 8px;
+  border-radius:6px;
+  font-size:10px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.08em;
+  background:linear-gradient(135deg,#2a0a18,#180820);
+  border:1px solid rgba(255,79,122,.4);
+  box-shadow:0 2px 12px rgba(124,106,255,.25);
+  animation:coderGlow 2.5s ease-in-out infinite;
+  display:inline-flex;align-items:center;gap:5px;
+  position:relative;overflow:hidden;white-space:nowrap;flex-shrink:0;
+}
+.role-coder span{
+  background:linear-gradient(90deg,#ff4f7a,#ff9f43,#ffe043,#7c6aff,#ff4f7a);
+  background-size:200% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:rgbSlide 2.5s linear infinite;
+}
+.role-coder svg{color:#ff4f7a;width:11px;height:11px;flex-shrink:0}
+@keyframes coderGlow{
+  0%,100%{box-shadow:0 2px 12px rgba(255,79,122,.25),0 0 0 0 rgba(124,106,255,0)}
+  50%{box-shadow:0 2px 20px rgba(124,106,255,.4),0 0 12px rgba(255,79,122,.15)}
+}
+@keyframes rgbSlide{from{background-position:0% center}to{background-position:200% center}}
+
+/* post author badge — bigger version */
+.post-author .role-badge{font-size:11px;padding:4px 11px 4px 9px}
 
 /* ── ABOUT ── */
 .about-hero{min-height:calc(100vh - 58px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px;position:relative;overflow:hidden}
@@ -163,13 +229,33 @@ select.form-input{cursor:pointer}
 .t-stat{display:flex;align-items:center;gap:5px}
 .t-stat svg{width:13px;height:13px}
 .post-list{display:flex;flex-direction:column;gap:10px;margin-top:20px}
-.post-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;display:grid;grid-template-columns:148px 1fr;gap:18px}
-.post-author{border-right:1px solid var(--border);padding-right:18px}
-.post-av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;margin-bottom:9px}
+.post-item{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  display:grid;grid-template-columns:160px 1fr;
+  transition:border-color .18s;
+}
+.post-item:hover{border-color:var(--border2)}
+.post-author{
+  padding:18px 16px;
+  background:rgba(255,255,255,.025);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;gap:0;
+}
+.post-av{
+  width:48px;height:48px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:10px;flex-shrink:0;
+  box-shadow:0 4px 14px rgba(124,106,255,.35);
+}
 .post-av svg{width:22px;height:22px;color:#fff}
-.post-uname{font-weight:600;font-size:13.5px;margin-bottom:5px}
-.post-body{font-size:13.5px;line-height:1.72;color:rgba(240,240,245,.85);word-break:break-word}
-.post-date{font-size:11px;color:var(--muted);margin-top:10px}
+.post-uname{font-weight:700;font-size:13px;margin-bottom:7px;word-break:break-word}
+.post-content{padding:16px 18px;display:flex;flex-direction:column;justify-content:space-between}
+.post-body{font-size:14px;line-height:1.75;color:rgba(240,240,245,.88);word-break:break-word;white-space:pre-wrap}
+.post-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+.post-date{font-size:11px;color:var(--muted)}
 .reply-box{margin-top:18px}
 
 /* ── TOP ── */
@@ -339,8 +425,9 @@ const canApprove = r => (ROLES[r]?.level||0) >= 3 || r==='coder';
 
 function roleBadge(role) {
   const r = ROLES[role]; if(!r||!r.cls) return '';
-  if(role==='coder') return `<span class="role-badge role-coder"><span>${r.label}</span></span>`;
-  return `<span class="role-badge ${r.cls}">${r.label}</span>`;
+  const shieldSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+  if(role==='coder') return `<span class="role-badge role-coder">${shieldSvg}<span>${r.label}</span></span>`;
+  return `<span class="role-badge ${r.cls}">${shieldSvg}${r.label}</span>`;
 }
 
 // ── SVG helpers ──
@@ -436,9 +523,13 @@ function updateNavAuth() {
   const el = document.getElementById('navAuth');
   if(curUser && curProfile) {
     el.innerHTML = `
-      <span class="text-sm text-muted" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(curProfile.username)}</span>
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;cursor:pointer" onclick="showPage('profile')">
+        ${curProfile.avatar_url
+          ? `<img src="${curProfile.avatar_url}" style="width:100%;height:100%;object-fit:cover" />`
+          : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`}
+      </div>
+      <span class="text-sm text-muted" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(curProfile.username)}</span>
       ${roleBadge(curProfile.role)}
-      <button class="btn-ghost btn-sm" onclick="showPage('profile')">${SVG.user}</button>
       <button class="btn-ghost btn-sm" onclick="doLogout()" title="Выйти">${SVG.logout}</button>
     `;
   } else {
@@ -640,13 +731,31 @@ function selRounds(n, btn) {
 }
 
 async function startGame() {
-  const { data } = await sb.from('game_points').select('*').eq('approved',true);
-  if(!data||data.length < G.total) return toast('Недостаточно точек в базе данных','error');
-  G.pts = data.sort(()=>Math.random()-.5).slice(0,G.total);
-  G.round=1; G.score=0; G.results=[]; G.guess=null; G.marker=null;
-  document.getElementById('gs-start').style.display='none';
-  document.getElementById('gs-active').style.display='block';
-  await initGuessMap(); loadRound();
+  const btn = document.querySelector('#gs-start .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Загрузка...';}
+  try {
+    const { data, error } = await sb.from('game_points').select('*').eq('approved',true);
+    if(error) throw new Error(error.message);
+    const available = data ? data.length : 0;
+    if(available === 0) {
+      toast('В базе нет ни одной точки. Добавь точки через раздел ниже.','error');
+      if(btn){btn.disabled=false;btn.textContent='Начать игру';}
+      return;
+    }
+    // Play with however many points exist (cap at requested rounds)
+    const actualTotal = Math.min(G.total, available);
+    if(actualTotal < G.total) toast(`Точек только ${available}, играем ${actualTotal} раундов`,'info');
+    G.total = actualTotal;
+    G.pts = data.sort(()=>Math.random()-.5).slice(0,G.total);
+    G.round=1; G.score=0; G.results=[]; G.guess=null; G.marker=null;
+    document.getElementById('gs-start').style.display='none';
+    document.getElementById('gs-active').style.display='block';
+    await initGuessMap();
+    loadRound();
+  } catch(e) {
+    toast('Ошибка: '+e.message,'error');
+    if(btn){btn.disabled=false;btn.textContent='Начать игру';}
+  }
 }
 
 async function initGuessMap() {
@@ -851,7 +960,7 @@ async function forumList() {
   const back=document.getElementById('f-back'); if(back)back.classList.add('hidden');
   const nb=document.getElementById('f-new'); if(nb)nb.classList.remove('hidden');
   document.getElementById('f-title').textContent=F.cat?.name||'Форум';
-  const {data}=await sb.from('forum_threads').select('*,profiles(username,role)').eq('category_id',F.cat?.id).order('created_at',{ascending:false});
+  const {data}=await sb.from('forum_threads').select('*,profiles(username,role,avatar_url)').eq('category_id',F.cat?.id).order('created_at',{ascending:false});
   const body=document.getElementById('f-body');
   if(!data||!data.length){
     body.innerHTML=`<div class="empty-state">${SVG.chat}<p>Тут пусто — создай первую тему!</p></div>`; return;
@@ -871,51 +980,132 @@ async function forumList() {
 }
 
 async function openThread(id) {
+  const body = document.getElementById('f-body');
+  if(!body) return;
+  // Show loading
+  body.innerHTML = `<div style="padding:40px;text-align:center"><div style="width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>`;
+
   document.getElementById('f-back')?.classList.remove('hidden');
   document.getElementById('f-new')?.classList.add('hidden');
-  await sb.rpc('increment_thread_views',{thread_id:id}).catch(()=>{});
-  const {data:t}=await sb.from('forum_threads').select('*,profiles(username,role)').eq('id',id).single();
-  const {data:posts}=await sb.from('forum_posts').select('*,profiles(username,role)').eq('thread_id',id).order('created_at');
-  F.thread=t; document.getElementById('f-title').textContent=t?.title||'';
-  const body=document.getElementById('f-body');
-  body.innerHTML=`<div class="post-list">
-    ${renderPost(t,true)}
-    ${(posts||[]).map(p=>renderPost(p,false)).join('')}
-  </div>
-  ${curUser?`<div class="reply-box card"><div class="form-group"><label class="form-label">Ответить</label><textarea class="form-input" id="reply-txt" rows="4" placeholder="Напиши ответ..."></textarea></div><button class="btn-primary" onclick="submitReply('${id}')">Отправить</button></div>`
-  :`<p class="text-muted text-sm text-center" style="padding:20px 0">Войди, чтобы ответить</p>`}`;
+
+  // Fire-and-forget — views increment (never blocks)
+  setTimeout(()=> sb.rpc('increment_thread_views',{thread_id:id}).catch(()=>{}), 0);
+
+  // Load thread and posts independently so one failure doesn't kill the other
+  let t = null, posts = [];
+  try {
+    const res = await sb.from('forum_threads')
+      .select('*,profiles(username,role,avatar_url)')
+      .eq('id', id)
+      .single();
+    t = res.data;
+  } catch(e) { console.warn('thread load error', e); }
+
+  try {
+    const res = await sb.from('forum_posts')
+      .select('*,profiles(username,role,avatar_url)')
+      .eq('thread_id', id)
+      .order('created_at');
+    posts = res.data || [];
+  } catch(e) { console.warn('posts load error', e); }
+
+  if(!t){ body.innerHTML=`<p class="text-muted text-center" style="padding:40px">Тема не найдена или нет доступа</p>`; return; }
+
+  F.thread=t;
+  const titleEl = document.getElementById('f-title');
+  if(titleEl) titleEl.textContent = t.title||'';
+
+  const safeId = id.replace(/[^a-zA-Z0-9-_]/g,'');
+
+  body.innerHTML = `
+    <div class="post-list">
+      ${renderPost(t,true)}
+      ${(posts||[]).map(p=>renderPost(p,false)).join('')}
+    </div>
+    ${curUser ? `
+      <div class="reply-box card" style="margin-top:16px">
+        <div style="font-family:var(--font-d);font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Ответить
+        </div>
+        <textarea class="form-input" id="reply-input-${safeId}" rows="4" placeholder="Напиши ответ..."></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:10px">
+          <button class="btn-primary" id="reply-btn-${safeId}" onclick="doReply('${safeId}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Отправить
+          </button>
+        </div>
+      </div>
+    ` : `<p class="text-muted text-sm text-center" style="padding:20px 0">Войди, чтобы ответить</p>`}
+  `;
+  // Store the real id for doReply
+  window._currentThreadId = id;
+  body.scrollTop = 0;
 }
 
 function renderPost(p,isOP) {
   const pr=p.profiles||{};
-  return `<div class="post-item">
+  const postContent = isOP ? (p.body||p.content||'') : (p.content||'');
+  const avContent = pr.avatar_url
+    ? `<img src="${pr.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.innerHTML='${SVG.user.replace(/'/g,"\'")}'"/>`
+    : SVG.user;
+  return `<div class="post-item${isOP?' post-op':''}">
     <div class="post-author">
-      <div class="post-av">${SVG.user}</div>
-      <div class="post-uname">${esc(pr.username||'?')}</div>
+      <div class="post-av" style="${pr.avatar_url?'background:none;box-shadow:none;overflow:hidden':''}">${avContent}</div>
+      <div class="post-uname">${esc(pr.username||'Аноним')}</div>
       ${roleBadge(pr.role)}
-      ${isOP?`<div class="text-sm text-muted" style="margin-top:5px">Автор</div>`:''}
+      ${isOP?`<div style="margin-top:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Автор</div>`:''}
     </div>
-    <div>
-      <div class="post-body">${esc(isOP?(p.body||p.content||''):p.content)}</div>
-      <div class="post-date">${timeAgo(p.created_at)}</div>
-      ${canMod(curProfile?.role)&&!isOP?`<div style="margin-top:10px"><button class="btn-danger btn-sm" onclick="delPost('${p.id}')">Удалить</button></div>`:''}
+    <div class="post-content">
+      <div class="post-body">${esc(postContent)}</div>
+      <div class="post-footer">
+        <div class="post-date">${timeAgo(p.created_at)}</div>
+        ${canMod(curProfile?.role)&&!isOP?`<button class="btn-danger btn-sm" onclick="delPost('${p.id}')">Удалить</button>`:''}
+      </div>
     </div>
   </div>`;
 }
 
-async function submitReply(tid) {
-  const txt=v('reply-txt'); if(!txt)return toast('Напиши что-нибудь','error');
+async function submitReply(tid) { return doReply(tid); }
+
+async function doReply(safeId) {
+  if(!curUser) return openLogin();
+
+  // Resolve real thread id
+  const realTid = window._currentThreadId || safeId;
+
+  const el = document.getElementById('reply-input-'+safeId);
+  const txt = el ? el.value.trim() : '';
+  if(!txt) return toast('Напиши что-нибудь','error');
+
+  // Ensure profile exists (FK guard)
   if(!curProfile) {
     await sb.from('profiles').upsert({
-      id:curUser.id, username: curUser.user_metadata?.username || ('user_'+curUser.id.slice(0,6)),
+      id:curUser.id,
+      username: curUser.user_metadata?.username || ('user_'+curUser.id.slice(0,6)),
       role:'user', avatar_emoji:'🎮', total_score:0, best_score:0, games_played:0
     },{onConflict:'id'});
     await fetchProfile(curUser.id);
   }
-  const {error}=await sb.from('forum_posts').insert({thread_id:tid,user_id:curUser.id,content:txt,created_at:new Date().toISOString()});
-  if(error)return toast('Ошибка: '+error.message,'error');
-  await sb.rpc('increment_reply_count',{thread_id:tid}).catch(()=>{});
-  toast('Ответ добавлен','success'); openThread(tid);
+
+  const btn = document.getElementById('reply-btn-'+safeId);
+  if(btn){btn.disabled=true;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Отправка...';}
+
+  const {data: postData, error} = await sb.from('forum_posts').insert({
+    thread_id: realTid,
+    user_id: curUser.id,
+    content: txt,
+    created_at: new Date().toISOString()
+  }).select();
+
+  if(error){
+    if(btn){btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Отправить';}
+    return toast('Ошибка: '+error.message,'error');
+  }
+
+  setTimeout(()=> sb.rpc('increment_reply_count',{thread_id:realTid}).catch(()=>{}), 0);
+  toast('Ответ добавлен','success');
+  openThread(realTid);
 }
 
 async function delPost(id) {
@@ -946,7 +1136,8 @@ async function submitThread() {
     },{onConflict:'id'});
     await fetchProfile(curUser.id);
   }
-  const {error}=await sb.from('forum_threads').insert({title,body,category_id:F.cat?.id,user_id:curUser.id,reply_count:0,views:0,created_at:new Date().toISOString()});
+  const threadPayload = {title, body, category_id:F.cat?.id, user_id:curUser.id, reply_count:0, views:0, created_at:new Date().toISOString()};
+  const {error} = await sb.from('forum_threads').insert(threadPayload);
   if(error)return toast('Ошибка: '+error.message,'error');
   closeModal(); toast('Тема создана!','success'); forumList();
 }
@@ -1049,7 +1240,11 @@ async function renderProfile() {
   page.innerHTML=`
     <div class="profile-wrap">
       <div class="profile-header-card">
-        <div class="p-avatar">${SVG.user}</div>
+        <div class="p-avatar" style="${p.avatar_url?'background:none;box-shadow:none;overflow:hidden':''}">
+          ${p.avatar_url
+            ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`
+            : SVG.user}
+        </div>
         <div class="p-info">
           <div class="p-name">${esc(p.username)} ${roleBadge(p.role)}</div>
           <div class="p-email">${curUser.email}</div>
@@ -1067,9 +1262,26 @@ async function renderProfile() {
           <div id="p-games"><div class="text-muted text-sm">Загрузка...</div></div>
         </div>
         <div class="card">
-          <div class="card-title">${SVG.user} Аватар</div>
-          <div class="emoji-grid">
-            ${'🎮 🏠 🌲 🐾 ⭐ 🔥 🎯 🦁 🐺 🌙 💎 🎪'.split(' ').map(e=>`<button class="emoji-btn ${p.avatar_emoji===e?'active':''}" onclick="setEmoji('${e}')">${e}</button>`).join('')}
+          <div class="card-title">${SVG.camera} Аватар</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+            <div id="avatar-preview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid var(--border2);flex-shrink:0">
+              ${p.avatar_url
+                ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover" />`
+                : `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`}
+            </div>
+            <div style="text-align:center">
+              <label style="cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:rgba(124,106,255,.12);border:1px solid rgba(124,106,255,.3);color:var(--accent);padding:8px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:all .18s" onmouseover="this.style.background='rgba(124,106,255,.22)'" onmouseout="this.style.background='rgba(124,106,255,.12)'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Загрузить фото
+                <input type="file" accept="image/*" style="display:none" onchange="uploadAvatar(event)" />
+              </label>
+              <p class="text-muted text-sm" style="margin-top:8px">JPG, PNG до 2MB</p>
+            </div>
+            <div id="avatar-upload-progress" style="display:none;width:100%">
+              <div style="height:3px;background:var(--bg3);border-radius:99px;overflow:hidden">
+                <div id="avatar-prog-bar" style="height:100%;background:var(--accent);border-radius:99px;width:0%;transition:width .3s"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1141,6 +1353,54 @@ async function assignRole() {
 async function setEmoji(e) {
   await sb.from('profiles').update({avatar_emoji:e}).eq('id',curUser.id);
   curProfile.avatar_emoji=e; toast('Аватар обновлён','success'); renderProfile();
+}
+
+async function uploadAvatar(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  if(file.size > 2*1024*1024) return toast('Файл больше 2MB','error');
+  if(!file.type.startsWith('image/')) return toast('Только изображения','error');
+
+  const prog = document.getElementById('avatar-upload-progress');
+  const bar = document.getElementById('avatar-prog-bar');
+  if(prog) prog.style.display='block';
+  if(bar) bar.style.width='20%';
+
+  try {
+    const ext = file.name.split('.').pop().toLowerCase();
+    const path = `avatars/${curUser.id}.${ext}`;
+
+    if(bar) bar.style.width='40%';
+
+    const { error: upErr } = await sb.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if(upErr) throw new Error(upErr.message);
+    if(bar) bar.style.width='70%';
+
+    const { data: urlData } = sb.storage.from('avatars').getPublicUrl(path);
+    const avatarUrl = urlData.publicUrl + '?t=' + Date.now();
+
+    if(bar) bar.style.width='85%';
+
+    await sb.from('profiles').update({ avatar_url: avatarUrl }).eq('id', curUser.id);
+    curProfile.avatar_url = avatarUrl;
+
+    if(bar) bar.style.width='100%';
+
+    // Update preview
+    const preview = document.getElementById('avatar-preview');
+    if(preview) preview.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover"/>`;
+
+    // Update nav avatar
+    updateNavAuth();
+    toast('Аватар обновлён!','success');
+  } catch(e) {
+    toast('Ошибка загрузки: '+e.message,'error');
+  } finally {
+    setTimeout(()=>{ if(prog)prog.style.display='none'; if(bar)bar.style.width='0%'; }, 1200);
+  }
 }
 
 function openEditProfile() {
@@ -1224,3 +1484,4 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
 </script>
 </body>
 </html>
+
