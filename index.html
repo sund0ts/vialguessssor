@@ -869,7 +869,7 @@ function loadRound() {
   if(G.cur.photo_url) ph.innerHTML=`<img src="${G.cur.photo_url}" alt="point"/>`;
   else ph.innerHTML=`<div class="no-photo-msg">${SVG.camera}<span>Фото не добавлено</span><span class="text-sm">${esc(G.cur.name)}</span></div>`;
   const hb = document.getElementById('hint-box');
-  if(G.cur.hint){hb.textContent='💡 '+G.cur.hint;hb.style.display='block';}
+  if(G.cur.hint){hb.textContent=G.cur.hint;hb.style.display='block';}
   else hb.style.display='none';
 }
 
@@ -1007,26 +1007,63 @@ async function rejectPoint(id) {
 // FORUM
 // =============================================
 let F = { cats:[], cat:null, thread:null };
-const DEFAULT_CATS = [{id:'lounge',name:'Курилка'},{id:'discuss',name:'Обсуждение'}];
+const DEFAULT_CATS = [
+  {id:'info',    name:'Информация',  description:'Правила, роли и всё о сайте'},
+  {id:'lounge',  name:'Курилка',     description:'Свободное общение'},
+  {id:'discuss', name:'Обсуждение',  description:'Обсуждение деревни и игры'},
+];
 
 async function renderForum() {
-  document.getElementById('page-forum').innerHTML=`<div id="f-body" class="forum-page"></div>`;
+  F.cats=[]; F.cat=null; F.thread=null;
+  const page = document.getElementById('page-forum');
+  if(!page) return;
+  page.innerHTML = `<div id="f-body" style="min-height:calc(100vh - 58px)"></div>`;
   await loadCats();
 }
 
 async function loadCats() {
+  const body = document.getElementById('f-body');
+  if(body) body.innerHTML = `<div style="padding:48px;text-align:center">
+    <div style="width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px"></div>
+    <div style="font-size:12px;color:var(--muted)">Загрузка форума...</div>
+  </div>`;
+
   let data = null;
   try {
-    const res = await fetchWithTimeout(sb.from('forum_categories').select('*').order('created_at').then(r=>r));
-    data = res.data;
-  } catch(e) { data = null; }
-  if(!data||!data.length){
-    await sb.from('forum_categories').insert(DEFAULT_CATS.map(c=>({id:c.id,name:c.name})));
-    data=DEFAULT_CATS;
+    const res = await fetchWithTimeout(
+      sb.from('forum_categories').select('*').order('created_at').then(r=>r),
+      10000
+    );
+    data = res?.data || null;
+  } catch(e) {
+    console.warn('loadCats error:', e.message);
+    // Show error with retry
+    if(body) body.innerHTML = `<div style="text-align:center;padding:60px 24px">
+      <div style="margin-bottom:12px;opacity:.5"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ff9f43" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:16px">Не удалось загрузить форум. Проверь соединение.</p>
+      <button class="btn-primary" onclick="renderForum()">Попробовать снова</button>
+    </div>`;
+    return;
   }
-  F.cats=data;
-  // Show main forum index (all categories)
+
+  if(!data || !data.length) {
+    // Try to seed default categories
+    try {
+      await sb.from('forum_categories').insert(
+        DEFAULT_CATS.map(cc=>({id:cc.id, name:cc.name, description:cc.description||''}))
+      );
+    } catch(e) { /* ignore duplicate errors */ }
+    // Re-fetch
+    try {
+      const res2 = await sb.from('forum_categories').select('*').order('created_at');
+      data = res2?.data || DEFAULT_CATS;
+    } catch(e) { data = DEFAULT_CATS; }
+  }
+
+  F.cats = data || DEFAULT_CATS;
   showForumIndex();
+  // Seed info post for coder (once)
+  setTimeout(seedInfoPost, 1000);
 }
 
 function renderCats() { /* legacy no-op */ }
@@ -1037,10 +1074,16 @@ function selCat(id) {
 // Main forum page: show all categories as sections
 async function showForumIndex() {
   F.cat = null; F.thread = null;
-  const body = document.getElementById('f-body');
-  if(!body) return;
 
-  // Load thread counts + last post per category
+  // Ensure f-body exists (re-create page if needed)
+  let body = document.getElementById('f-body');
+  if(!body) {
+    const page = document.getElementById('page-forum');
+    if(!page) return;
+    page.innerHTML = `<div id="f-body" style="min-height:calc(100vh - 58px)"></div>`;
+    body = document.getElementById('f-body');
+  }
+
   body.innerHTML = `<div style="padding:32px;text-align:center"><div style="width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto"></div></div>`;
 
   // Get all threads to compute stats per category
@@ -1050,12 +1093,27 @@ async function showForumIndex() {
       sb.from('forum_threads')
         .select('id,title,category_id,reply_count,created_at,profiles(username,avatar_url)')
         .order('created_at',{ascending:false})
-        .then(r=>r.data||[])
+        .then(r=>r.data||[]),
+      12000
     );
-    allThreads = r;
-  } catch(e) {}
+    allThreads = Array.isArray(r) ? r : [];
+  } catch(e) {
+    console.warn('allThreads fetch failed:', e.message);
+    allThreads = [];
+  }
+  // Safety check — if body was replaced (page switched), abort
+  if(!document.getElementById('f-body')) return;
 
-  const catIcon = id => id==='lounge'?SVG.smoke:SVG.disc;
+  const SVG_INFO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+  const catIcon = (id, color) => {
+    const icons = {
+      lounge:  SVG.smoke,
+      discuss: SVG.chat,
+      info:    SVG_INFO,
+    };
+    return icons[id] || SVG.disc;
+  };
+  const catAccent = id => ({lounge:'#ff9f43', discuss:'#7c6aff', info:'#00e5a0'})[id] || 'var(--accent)';
 
   const sections = F.cats.map(cat => {
     const threads = allThreads.filter(t=>t.category_id===cat.id);
@@ -1077,7 +1135,7 @@ async function showForumIndex() {
         <div class="forum-cats-block">
           ${sections.map(({cat,threads,last,totalReplies})=>`
             <div class="fcat-row" onclick="selCat('${cat.id}')">
-              <div class="fcat-icon">${catIcon(cat.id)}</div>
+              <div class="fcat-icon" style="background:${catAccent(cat.id)}18;color:${catAccent(cat.id)}">${catIcon(cat.id)}</div>
               <div class="fcat-info">
                 <div class="fcat-name">${esc(cat.name)}</div>
                 <div class="fcat-desc">${esc(cat.description||'')}</div>
@@ -1103,6 +1161,84 @@ function openNewThreadGlobal() {
   if(!F.cats.length) return;
   if(!F.cat) F.cat = F.cats[0];
   openNewThread();
+}
+
+// Seed the info post if it doesn't exist (called after categories load)
+async function seedInfoPost() {
+  if(!curUser || !curProfile || curProfile.role !== 'coder') return;
+  // Check if info thread exists
+  const {data} = await sb.from('forum_threads').select('id').eq('category_id','info').limit(1);
+  if(data && data.length > 0) return; // already exists
+
+  const body = `=== ДОБРО ПОЖАЛОВАТЬ В ВИЛЛАГЕСС ===
+
+ВиллаГесс — геогессор твоей деревни. Угадывай места по фотографиям, соревнуйся с соседями, общайся на форуме.
+
+─────────────────────────────────
+РАЗДЕЛЫ ФОРУМА
+─────────────────────────────────
+
+Информация — правила, объявления, всё о сайте (этот раздел)
+Курилка — свободное общение, болтовня
+Обсуждение — темы о деревне, игре, предложения
+
+─────────────────────────────────
+РОЛИ И ПРАВА
+─────────────────────────────────
+
+ХЕЛПЕР — помогает новым участникам
+МОДЕРАТОР — удаляет посты и темы
+АДМИНИСТРАТОР — одобряет точки в геогессоре
+КУРАТОР — назначает роли до модератора
+ЗГА (Зам. Главного Администратора) — назначает до куратора, создаёт разделы форума
+ГА (Главный Администратор) — назначает до ЗГА
+КОДЕР — полные права, техническое управление
+
+Роли выдаёт: ЗГА, ГА и Кодер через вкладку «Профиль».
+
+─────────────────────────────────
+ПРАВИЛА
+─────────────────────────────────
+
+1. Уважай других участников
+2. Не спамь и не флуди в разделах Информация и Обсуждение
+3. Предлагай только реальные точки деревни в геогессоре
+4. Никакого оскорбительного контента
+5. Вопросы к администрации — в личку или Телеграм: t.me/fucckeddreambot
+
+─────────────────────────────────
+КАК ИГРАТЬ
+─────────────────────────────────
+
+1. Перейди в раздел «Игра»
+2. Выбери количество раундов (3 / 5 / 10)
+3. Тебе показывают фото — угадай место на карте
+4. Чем ближе к цели — тем больше очков (макс. 5000 за раунд)
+5. Результаты сохраняются в топ (нужен аккаунт)
+
+─────────────────────────────────
+КАК ДОБАВИТЬ СВОЮ ТОЧКУ
+─────────────────────────────────
+
+Зайди в «Игра» → «Предложить точку».
+Укажи название, координаты и по возможности фото.
+Точка отправится на проверку модераторам.
+
+Связь: t.me/macanxyecocina | Поддержка: t.me/fucckeddreambot`;
+
+  await sb.from('forum_threads').insert({
+    title: 'О сайте, ролях и правилах',
+    body,
+    category_id: 'info',
+    user_id: curUser.id,
+    reply_count: 0,
+    views: 0,
+    is_pinned: true,
+    is_closed: true,
+    prefix: 'Важно',
+    created_at: new Date().toISOString()
+  });
+  toast('Информационный пост создан', 'success');
 }
 
 async function forumList() {
@@ -1236,7 +1372,7 @@ async function openThread(id) {
       : 'Не удалось загрузить тему: ' + e.message;
     body.innerHTML = `
       <div style="text-align:center;padding:48px 24px">
-        <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+        <div style="margin-bottom:12px;opacity:.5"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ff9f43" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <p style="color:var(--muted);margin-bottom:16px;font-size:14px">${msg}</p>
         <button class="btn-ghost" onclick="openThread('${id}')">Попробовать снова</button>
       </div>`;
@@ -1347,6 +1483,40 @@ function renderPost(p,isOP) {
   const avContent = pr.avatar_url
     ? `<img src="${pr.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.innerHTML='${SVG.user.replace(/'/g,"\'")}'"/>`
     : SVG.user;
+  // Format post body: handle section headers (===), separators (───), and role badge tokens
+  function formatPostBody(txt) {
+    if(!txt) return '';
+    const lines = txt.split('\n');
+    let html = '';
+    for(const line of lines) {
+      const esc_line = esc(line);
+      if(line.startsWith('=== ') && line.endsWith(' ===')) {
+        const title = esc(line.slice(4,-4));
+        html += `<div style="font-family:var(--font-d);font-size:17px;font-weight:800;color:var(--text);margin:20px 0 8px;letter-spacing:-.3px">${title}</div>`;
+      } else if(line.startsWith('─')) {
+        html += `<div style="height:1px;background:var(--border);margin:12px 0"></div>`;
+      } else if(line === '') {
+        html += `<div style="height:6px"></div>`;
+      } else if(/^ХЕЛПЕР|^МОДЕРАТОР|^АДМИНИСТРАТОР|^КУРАТОР|^ЗГА|^ГА |^КОДЕР/.test(line)) {
+        // Role line — show badge + description
+        const dashIdx = line.indexOf(' — ');
+        const roleName = dashIdx>0 ? line.slice(0,dashIdx) : line;
+        const desc = dashIdx>0 ? esc(line.slice(dashIdx+3)) : '';
+        const roleKey = {
+          'ХЕЛПЕР':'helper','МОДЕРАТОР':'mod','АДМИНИСТРАТОР':'admin',
+          'КУРАТОР':'curator','ЗГА':'zga','ГА':'ga','КОДЕР':'coder'
+        }[roleName.trim()] || '';
+        const badge = roleKey ? roleBadge(roleKey) : `<strong>${esc(roleName)}</strong>`;
+        html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;flex-wrap:wrap">${badge}${desc?`<span style="font-size:13px;color:var(--muted)">${desc}</span>`:''}</div>`;
+      } else {
+        html += `<div style="font-size:13.5px;line-height:1.7;color:rgba(240,240,245,.85)">${esc_line}</div>`;
+      }
+    }
+    return html;
+  }
+
+  const bodyHtml = postContent.includes('=== ') ? formatPostBody(postContent) : `<div style="white-space:pre-wrap;font-size:14px;line-height:1.75;color:rgba(240,240,245,.88)">${esc(postContent)}</div>`;
+
   return `<div class="post-item${isOP?' post-op':''}">
     <div class="post-author">
       <div class="post-av" style="${pr.avatar_url?'background:none;box-shadow:none;overflow:hidden':''}">${avContent}</div>
@@ -1355,7 +1525,7 @@ function renderPost(p,isOP) {
       ${isOP?`<div style="margin-top:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Автор</div>`:''}
     </div>
     <div class="post-content">
-      <div class="post-body">${esc(postContent)}</div>
+      <div class="post-body">${bodyHtml}</div>
       <div class="post-footer">
         <div class="post-date">${timeAgo(p.created_at)}</div>
         ${canMod(curProfile?.role)&&!isOP?`<button class="btn-danger btn-sm" onclick="delPost('${p.id}')">Удалить</button>`:''}
@@ -1407,7 +1577,7 @@ const PREFIX_LIST = ['Вопрос','Объявление','Обсуждение
 
 function openSetPrefix(id, current) {
   openModal(`
-    <h2 style="font-family:var(--font-d);font-size:20px;font-weight:800;margin-bottom:18px">🏷️ Префикс темы</h2>
+    <h2 style="font-family:var(--font-d);font-size:20px;font-weight:800;margin-bottom:18px">Префикс темы</h2>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
       <button class="thread-badge badge-prefix" style="cursor:pointer;padding:6px 14px;font-size:12px;background:var(--bg3);color:var(--muted);border:1px solid var(--border)" onclick="applyPrefix('${id}','')">
         Без префикса
