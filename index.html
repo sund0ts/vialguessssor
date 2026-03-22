@@ -246,6 +246,7 @@ select.form-input{cursor:pointer}
 
 /* ── LEAFLET DARK FIX ── */
 .leaflet-container{background:#1a1a26!important}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -374,13 +375,54 @@ let curUser = null, curProfile = null;
 // AUTH
 // =============================================
 async function initAuth() {
+  // Handle email confirmation redirect — Supabase puts code in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.replace('#',''));
+  const hasAuthCode = urlParams.has('code') || hashParams.has('access_token');
+
+  if (hasAuthCode) {
+    // Let Supabase exchange the code/token — getSession will trigger exchange
+    await sb.auth.getSession();
+    // Clean URL so it doesn't loop
+    const cleanUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+
   const { data: { session } } = await sb.auth.getSession();
-  if (session?.user) { curUser = session.user; await fetchProfile(curUser.id); }
-  sb.auth.onAuthStateChange(async (_ev, sess) => {
-    if (sess?.user) { curUser = sess.user; await fetchProfile(curUser.id); }
-    else { curUser = null; curProfile = null; }
+  if (session?.user) {
+    curUser = session.user;
+    const prof = await fetchProfile(curUser.id);
+    // Profile might not exist yet if this is first login after email confirm
+    if (!prof) {
+      const meta = session.user.user_metadata || {};
+      const uname = meta.username || ('user_' + curUser.id.slice(0,6));
+      await sb.from('profiles').upsert({
+        id: curUser.id, username: uname, role: 'user',
+        avatar_emoji: '🎮', total_score: 0, best_score: 0, games_played: 0
+      }, { onConflict: 'id' });
+      await fetchProfile(curUser.id);
+    }
+  }
+
+  sb.auth.onAuthStateChange(async (event, sess) => {
+    if (sess?.user) {
+      curUser = sess.user;
+      const prof = await fetchProfile(curUser.id);
+      if (!prof) {
+        const meta = sess.user.user_metadata || {};
+        const uname = meta.username || ('user_' + curUser.id.slice(0,6));
+        await sb.from('profiles').upsert({
+          id: curUser.id, username: uname, role: 'user',
+          avatar_emoji: '🎮', total_score: 0, best_score: 0, games_played: 0
+        }, { onConflict: 'id' });
+        await fetchProfile(curUser.id);
+      }
+    } else {
+      curUser = null; curProfile = null;
+    }
     updateNavAuth();
     if (curPage === 'profile') renderProfile();
+    if (curPage === 'forum') renderForum();
   });
   updateNavAuth();
 }
@@ -863,6 +905,13 @@ function renderPost(p,isOP) {
 
 async function submitReply(tid) {
   const txt=v('reply-txt'); if(!txt)return toast('Напиши что-нибудь','error');
+  if(!curProfile) {
+    await sb.from('profiles').upsert({
+      id:curUser.id, username: curUser.user_metadata?.username || ('user_'+curUser.id.slice(0,6)),
+      role:'user', avatar_emoji:'🎮', total_score:0, best_score:0, games_played:0
+    },{onConflict:'id'});
+    await fetchProfile(curUser.id);
+  }
   const {error}=await sb.from('forum_posts').insert({thread_id:tid,user_id:curUser.id,content:txt,created_at:new Date().toISOString()});
   if(error)return toast('Ошибка: '+error.message,'error');
   await sb.rpc('increment_reply_count',{thread_id:tid}).catch(()=>{});
@@ -889,6 +938,14 @@ function openNewThread() {
 async function submitThread() {
   const title=v('nt-title'),body=v('nt-body');
   if(!title||!body)return toast('Заполни все поля','error');
+  // Ensure profile row exists (FK guard)
+  if(!curProfile) {
+    await sb.from('profiles').upsert({
+      id:curUser.id, username: curUser.user_metadata?.username || ('user_'+curUser.id.slice(0,6)),
+      role:'user', avatar_emoji:'🎮', total_score:0, best_score:0, games_played:0
+    },{onConflict:'id'});
+    await fetchProfile(curUser.id);
+  }
   const {error}=await sb.from('forum_threads').insert({title,body,category_id:F.cat?.id,user_id:curUser.id,reply_count:0,views:0,created_at:new Date().toISOString()});
   if(error)return toast('Ошибка: '+error.message,'error');
   closeModal(); toast('Тема создана!','success'); forumList();
@@ -962,19 +1019,31 @@ async function loadTop() {
 // =============================================
 async function renderProfile() {
   const page=document.getElementById('page-profile');
-  if(!curUser||!curProfile){
+  // Wait a moment for auth state to settle (handles page reload)
+  if(!curUser) {
+    // Check if session is loading
     page.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 58px)">
-      <div class="card" style="text-align:center;padding:48px 40px;max-width:360px">
-        <div style="width:60px;height:60px;background:rgba(124,106,255,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">${SVG.user}</div>
-        <h2 style="font-family:var(--font-d);font-size:22px;font-weight:800;margin-bottom:9px">Войди в аккаунт</h2>
-        <p class="text-muted text-sm" style="margin-bottom:22px">Для просмотра профиля нужна авторизация</p>
-        <div style="display:flex;gap:10px;justify-content:center">
-          <button class="btn-primary" onclick="openLogin()">Войти</button>
-          <button class="btn-ghost" onclick="openRegister()">Регистрация</button>
-        </div>
+      <div style="text-align:center;padding:40px">
+        <div style="width:40px;height:40px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px"></div>
+        <p class="text-muted text-sm">Загрузка...</p>
       </div>
     </div>`;
-    return;
+    // Re-check after short delay (session might still be loading)
+    await new Promise(r => setTimeout(r, 600));
+    if(!curUser) {
+      page.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 58px)">
+        <div class="card" style="text-align:center;padding:48px 40px;max-width:360px">
+          <div style="width:60px;height:60px;background:rgba(124,106,255,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">${SVG.user}</div>
+          <h2 style="font-family:var(--font-d);font-size:22px;font-weight:800;margin-bottom:9px">Войди в аккаунт</h2>
+          <p class="text-muted text-sm" style="margin-bottom:22px">Для просмотра профиля нужна авторизация</p>
+          <div style="display:flex;gap:10px;justify-content:center">
+            <button class="btn-primary" onclick="openLogin()">Войти</button>
+            <button class="btn-ghost" onclick="openRegister()">Регистрация</button>
+          </div>
+        </div>
+      </div>`;
+      return;
+    }
   }
   const p=curProfile;
   page.innerHTML=`
@@ -1145,7 +1214,13 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
 });
 
 // ── BOOT ──
-(async()=>{ await initAuth(); showPage('about'); })();
+(async()=>{
+  await initAuth();
+  // If URL has auth code — user came from email confirm link, go to profile
+  const urlParams = new URLSearchParams(window.location.search);
+  const wasRedirect = urlParams.has('code') || document.referrer.includes('supabase');
+  showPage(wasRedirect && curUser ? 'profile' : 'about');
+})();
 </script>
 </body>
 </html>
