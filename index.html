@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css"/>
 <style>
 /* ── RESET & ROOT ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -308,6 +309,37 @@ select.form-input{cursor:pointer}
 .post-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
 .post-date{font-size:11px;color:var(--muted)}
 .reply-box{margin-top:18px}
+
+/* ── QUILL EDITOR DARK THEME ── */
+.ql-toolbar.ql-snow{
+  background:var(--bg3);border:1px solid var(--border2)!important;
+  border-radius:var(--radius-sm) var(--radius-sm) 0 0;
+  padding:8px 10px;display:flex;flex-wrap:wrap;gap:2px;
+}
+.ql-container.ql-snow{
+  background:var(--bg3);border:1px solid var(--border2)!important;
+  border-top:none!important;
+  border-radius:0 0 var(--radius-sm) var(--radius-sm);
+  font-family:var(--font-b);font-size:14px;color:var(--text);
+}
+.ql-editor{min-height:100px;max-height:320px;overflow-y:auto;padding:12px 14px;color:var(--text);line-height:1.7}
+.ql-editor.ql-blank::before{color:var(--muted);font-style:normal}
+.ql-snow .ql-stroke{stroke:var(--muted)!important}
+.ql-snow .ql-fill{fill:var(--muted)!important}
+.ql-snow .ql-picker{color:var(--muted)!important}
+.ql-snow .ql-picker-options{background:var(--bg2)!important;border:1px solid var(--border2)!important;border-radius:var(--radius-sm)!important}
+.ql-toolbar button:hover .ql-stroke,.ql-toolbar button.ql-active .ql-stroke{stroke:var(--accent)!important}
+.ql-toolbar button:hover .ql-fill,.ql-toolbar button.ql-active .ql-fill{fill:var(--accent)!important}
+.ql-toolbar button:hover,.ql-toolbar button.ql-active{background:rgba(124,106,255,.1)!important;border-radius:5px!important}
+.ql-snow .ql-picker-label:hover,.ql-snow .ql-picker-label.ql-active{color:var(--accent)!important}
+.ql-editor h1,.ql-editor h2,.ql-editor h3{color:var(--text);font-family:var(--font-d)}
+.ql-editor a{color:var(--accent)}
+.ql-editor code,.ql-editor pre{background:var(--bg2)!important;color:#00e5a0!important;border-radius:6px}
+.ql-editor blockquote{border-left:3px solid var(--accent);padding-left:12px;color:var(--muted)}
+.ql-editor ol,.ql-editor ul{padding-left:20px}
+.ql-snow .ql-tooltip{background:var(--bg2)!important;border:1px solid var(--border2)!important;color:var(--text)!important;border-radius:8px!important;box-shadow:0 8px 24px rgba(0,0,0,.4)!important}
+.ql-snow .ql-tooltip input[type=text]{background:var(--bg3)!important;border:1px solid var(--border)!important;color:var(--text)!important;border-radius:6px!important}
+.ql-snow .ql-tooltip a.ql-action,.ql-snow .ql-tooltip a.ql-remove{color:var(--accent)!important}
 /* ── THREAD BADGES ── */
 .thread-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
 .badge-pinned{background:rgba(255,215,0,.12);color:#ffd700;border:1px solid rgba(255,215,0,.3)}
@@ -547,6 +579,7 @@ select.form-input{cursor:pointer}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
 <script>
 // =============================================
 // CONFIG — замени на свои ключи из supabase.com
@@ -1556,7 +1589,7 @@ async function openThread(id) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Ответить
         </div>
-        <textarea class="form-input" id="reply-input-${safeId}" rows="4" placeholder="Напиши ответ..."></textarea>
+        <div id="reply-quill-${safeId}"></div>
         <div style="display:flex;justify-content:flex-end;margin-top:10px">
           <button class="btn-primary" id="reply-btn-${safeId}" onclick="doReply('${safeId}')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -1587,6 +1620,31 @@ async function openThread(id) {
   `;
   window._currentThreadId = id;
   body.scrollTop = 0;
+
+  // Init Quill editor for reply box
+  if(curUser && !(t.is_closed && !isMod)) {
+    setTimeout(()=>{
+      const el = document.getElementById('reply-quill-'+safeId);
+      if(el && !el.querySelector('.ql-editor')) {
+        const q = new Quill('#reply-quill-'+safeId, {
+          theme: 'snow',
+          placeholder: 'Напиши ответ...',
+          modules: {
+            toolbar: [
+              ['bold','italic','underline','strike'],
+              ['blockquote','code-block'],
+              [{'list':'ordered'},{'list':'bullet'}],
+              [{'header':[1,2,3,false]}],
+              ['link'],
+              ['clean']
+            ]
+          }
+        });
+        window._replyQuill = window._replyQuill || {};
+        window._replyQuill[safeId] = q;
+      }
+    }, 50);
+  }
 }
 
 function renderPost(p,isOP) {
@@ -1627,7 +1685,14 @@ function renderPost(p,isOP) {
     return html;
   }
 
-  const bodyHtml = postContent.includes('=== ') ? formatPostBody(postContent) : `<div style="white-space:pre-wrap;font-size:14px;line-height:1.75;color:rgba(240,240,245,.88)">${esc(postContent)}</div>`;
+  // Detect if content is HTML (from Quill) or plain text
+  const isHtml = postContent.trimStart().startsWith('<') && postContent.includes('</');
+  const isFormatted = !isHtml && postContent.includes('=== ');
+  const bodyHtml = isFormatted
+    ? formatPostBody(postContent)
+    : isHtml
+      ? `<div class="ql-editor" style="padding:0;font-size:14px;min-height:0">${postContent}</div>`
+      : `<div style="white-space:pre-wrap;font-size:14px;line-height:1.75;color:rgba(240,240,245,.88)">${esc(postContent)}</div>`;
 
   return `<div class="post-item${isOP?' post-op':''}">
     <div class="post-author">
@@ -1734,9 +1799,13 @@ async function doReply(safeId) {
   // Resolve real thread id
   const realTid = window._currentThreadId || safeId;
 
-  const el = document.getElementById('reply-input-'+safeId);
-  const txt = el ? el.value.trim() : '';
-  if(!txt) return toast('Напиши что-нибудь','error');
+  // Get content from Quill if available, fallback to textarea
+  const quill = window._replyQuill && window._replyQuill[safeId];
+  const txt = quill
+    ? quill.root.innerHTML.trim()
+    : (document.getElementById('reply-input-'+safeId)?.value?.trim()||'');
+  const txtPlain = quill ? quill.getText().trim() : txt;
+  if(!txtPlain) return toast('Напиши что-нибудь','error');
 
   // Ensure profile exists (FK guard)
   if(!curProfile) {
@@ -1793,14 +1862,40 @@ function openNewThread() {
   openModal(`
     <h2 style="font-family:var(--font-d);font-size:20px;font-weight:800;margin-bottom:18px">Новая тема</h2>
     <div class="form-group"><label class="form-label">Заголовок</label><input class="form-input" id="nt-title" placeholder="О чём?"/></div>
-    <div class="form-group"><label class="form-label">Текст</label><textarea class="form-input" id="nt-body" rows="5" placeholder="Расскажи подробнее..."></textarea></div>
-    <button class="btn-primary w-full" style="margin-top:6px" onclick="submitThread()">Создать тему</button>
+    <div class="form-group"><label class="form-label">Текст</label><div id="nt-quill-body" style="margin-top:4px"></div></div>
+    <button class="btn-primary w-full" style="margin-top:12px" onclick="submitThread()">Создать тему</button>
   `);
+  setTimeout(()=>{
+    const el = document.getElementById('nt-quill-body');
+    if(el && !el.querySelector('.ql-editor')) {
+      window._newThreadQuill = new Quill('#nt-quill-body', {
+        theme:'snow',
+        placeholder:'Расскажи подробнее...',
+        modules:{
+          toolbar:[
+            ['bold','italic','underline','strike'],
+            ['blockquote','code-block'],
+            [{'list':'ordered'},{'list':'bullet'}],
+            [{'header':[1,2,3,false]}],
+            ['link'],
+            ['clean']
+          ]
+        }
+      });
+    }
+    document.getElementById('nt-title')?.focus();
+  },80);
 }
 
 async function submitThread() {
-  const title=v('nt-title'),body=v('nt-body');
-  if(!title||!body)return toast('Заполни все поля','error');
+  const title = v('nt-title');
+  const body = window._newThreadQuill
+    ? window._newThreadQuill.root.innerHTML.trim()
+    : v('nt-body');
+  const bodyText = window._newThreadQuill
+    ? window._newThreadQuill.getText().trim()
+    : body;
+  if(!title||!bodyText)return toast('Заполни все поля','error');
   // Ensure profile row exists (FK guard)
   if(!curProfile) {
     await sb.from('profiles').upsert({
@@ -2509,6 +2604,10 @@ function openModal(html, wide=false) {
 function closeModal() {
   document.getElementById('modal-overlay').classList.add('hidden');
   document.getElementById('modal-content').innerHTML='';
+  // Clear Quill instances
+  window._newThreadQuill = null;
+  const box = document.getElementById('modal-box');
+  if(box) box.classList.remove('wide');
 }
 
 function toast(msg,type='info') {
