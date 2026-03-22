@@ -257,6 +257,16 @@ select.form-input{cursor:pointer}
 .post-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
 .post-date{font-size:11px;color:var(--muted)}
 .reply-box{margin-top:18px}
+/* ── THREAD BADGES ── */
+.thread-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+.badge-pinned{background:rgba(255,215,0,.12);color:#ffd700;border:1px solid rgba(255,215,0,.3)}
+.badge-closed{background:rgba(255,79,122,.1);color:#ff4f7a;border:1px solid rgba(255,79,122,.25)}
+.badge-prefix{border-radius:5px;font-size:10px;font-weight:700;padding:2px 8px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+.thread-item.is-pinned{border-color:rgba(255,215,0,.2);background:linear-gradient(90deg,rgba(255,215,0,.03),var(--bg2))}
+.thread-item.is-closed{opacity:.7}
+.thread-item.is-closed .t-title{color:var(--muted)}
+.thread-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:12px 14px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border)}
+.thread-actions button{font-size:11px;padding:5px 12px}
 
 /* ── TOP ── */
 .top-wrap{padding:40px 32px;max-width:860px;margin:0 auto}
@@ -960,16 +970,26 @@ async function forumList() {
   const back=document.getElementById('f-back'); if(back)back.classList.add('hidden');
   const nb=document.getElementById('f-new'); if(nb)nb.classList.remove('hidden');
   document.getElementById('f-title').textContent=F.cat?.name||'Форум';
-  const {data}=await sb.from('forum_threads').select('*,profiles(username,role,avatar_url)').eq('category_id',F.cat?.id).order('created_at',{ascending:false});
+  const {data}=await sb.from('forum_threads')
+    .select('*,profiles(username,role,avatar_url)')
+    .eq('category_id',F.cat?.id)
+    .order('created_at',{ascending:false});
   const body=document.getElementById('f-body');
   if(!data||!data.length){
     body.innerHTML=`<div class="empty-state">${SVG.chat}<p>Тут пусто — создай первую тему!</p></div>`; return;
   }
-  body.innerHTML=`<div class="thread-list">`+data.map(t=>`
-    <div class="thread-item" onclick="openThread('${t.id}')">
+  // Pinned threads first
+  const sorted = [...data].sort((a,b)=>((b.is_pinned?1:0)-(a.is_pinned?1:0)));
+  body.innerHTML=`<div class="thread-list">`+sorted.map(t=>`
+    <div class="thread-item${t.is_pinned?' is-pinned':''}${t.is_closed?' is-closed':''}" onclick="openThread('${t.id}')">
       <div class="t-avatar">${SVG.user}</div>
       <div class="t-info">
-        <div class="t-title">${esc(t.title)}</div>
+        <div class="t-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          ${t.is_pinned?`<span class="thread-badge badge-pinned">${SVG.pin.replace('width="24"','width="10"').replace('height="24"','height="10"')} ЗАКРЕП</span>`:''}
+          ${t.is_closed?`<span class="thread-badge badge-closed">${SVG.x.replace('width="24"','width="10"').replace('height="24"','height="10"')} ЗАКРЫТО</span>`:''}
+          ${t.prefix?`<span class="thread-badge badge-prefix" style="background:${prefixColor(t.prefix)+'22'};color:${prefixColor(t.prefix)};border:1px solid ${prefixColor(t.prefix)+'44'}">${esc(t.prefix)}</span>`:''}
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.title)}</span>
+        </div>
         <div class="t-meta">${esc(t.profiles?.username||'?')} ${roleBadge(t.profiles?.role)} · ${timeAgo(t.created_at)}</div>
       </div>
       <div class="t-stats">
@@ -977,6 +997,14 @@ async function forumList() {
         <div class="t-stat">${SVG.eye}<span>${t.views||0}</span></div>
       </div>
     </div>`).join('')+`</div>`;
+}
+
+function prefixColor(prefix) {
+  const map = {
+    'Вопрос':'#7c6aff','Объявление':'#ffd700','Обсуждение':'#00e5a0',
+    'Флуд':'#ff9f43','Важно':'#ff4f7a','Новость':'#5bc8f5','Идея':'#c98ff0',
+  };
+  return map[prefix] || '#8080a0';
 }
 
 async function openThread(id) {
@@ -1016,13 +1044,43 @@ async function openThread(id) {
   if(titleEl) titleEl.textContent = t.title||'';
 
   const safeId = id.replace(/[^a-zA-Z0-9-_]/g,'');
+  const isMod = canMod(curProfile?.role);
+  const isAuthor = curUser && t.user_id === curUser.id;
 
-  body.innerHTML = `
-    <div class="post-list">
-      ${renderPost(t,true)}
-      ${(posts||[]).map(p=>renderPost(p,false)).join('')}
+  // Mod actions bar
+  const modBar = (isMod) ? `
+    <div class="thread-actions">
+      <button class="btn-ghost" onclick="togglePin('${id}',${!!t.is_pinned})">
+        ${t.is_pinned
+          ? `${SVG.pin.replace('width="24"','width="13"').replace('height="24"','height="13"')} Открепить`
+          : `${SVG.pin.replace('width="24"','width="13"').replace('height="24"','height="13"')} Закрепить`}
+      </button>
+      <button class="btn-ghost" onclick="toggleClose('${id}',${!!t.is_closed})">
+        ${t.is_closed
+          ? `${SVG.check.replace('width="24"','width="13"').replace('height="24"','height="13"')} Открыть`
+          : `${SVG.x.replace('width="24"','width="13"').replace('height="24"','height="13"')} Закрыть`}
+      </button>
+      <button class="btn-ghost" onclick="openEditThread('${id}')">
+        ${SVG.edit.replace('width="24"','width="13"').replace('height="24"','height="13"')} Изменить
+      </button>
+      <button class="btn-ghost" onclick="openSetPrefix('${id}','${esc(t.prefix||'')}')">
+        🏷️ Префикс
+      </button>
+      <button class="btn-danger btn-sm" onclick="modDeleteThread('${id}')">
+        ${SVG.x.replace('width="24"','width="13"').replace('height="24"','height="13"')} Удалить тему
+      </button>
     </div>
-    ${curUser ? `
+  ` : (isAuthor ? `
+    <div class="thread-actions">
+      <button class="btn-ghost" onclick="openEditThread('${id}')">
+        ${SVG.edit.replace('width="24"','width="13"').replace('height="24"','height="13"')} Изменить тему
+      </button>
+    </div>
+  ` : '');
+
+  const replyBlock = (t.is_closed && !isMod)
+    ? `<div class="card" style="margin-top:16px;text-align:center;padding:18px;color:var(--muted);font-size:13px">🔒 Тема закрыта — ответы запрещены</div>`
+    : curUser ? `
       <div class="reply-box card" style="margin-top:16px">
         <div style="font-family:var(--font-d);font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -1036,9 +1094,16 @@ async function openThread(id) {
           </button>
         </div>
       </div>
-    ` : `<p class="text-muted text-sm text-center" style="padding:20px 0">Войди, чтобы ответить</p>`}
+    ` : `<p class="text-muted text-sm text-center" style="padding:20px 0">Войди, чтобы ответить</p>`;
+
+  body.innerHTML = `
+    ${modBar}
+    <div class="post-list">
+      ${renderPost(t,true)}
+      ${(posts||[]).map(p=>renderPost(p,false)).join('')}
+    </div>
+    ${replyBlock}
   `;
-  // Store the real id for doReply
   window._currentThreadId = id;
   body.scrollTop = 0;
 }
@@ -1064,6 +1129,86 @@ function renderPost(p,isOP) {
       </div>
     </div>
   </div>`;
+}
+
+// ── THREAD MODERATION ──
+async function togglePin(id, currently) {
+  const {error} = await sb.from('forum_threads').update({is_pinned:!currently}).eq('id',id);
+  if(error) return toast('Ошибка: '+error.message,'error');
+  toast(currently?'Откреплено':'Закреплено ⭐','success');
+  openThread(id);
+}
+
+async function toggleClose(id, currently) {
+  const {error} = await sb.from('forum_threads').update({is_closed:!currently}).eq('id',id);
+  if(error) return toast('Ошибка: '+error.message,'error');
+  toast(currently?'Тема открыта':'Тема закрыта 🔒','info');
+  openThread(id);
+}
+
+function openEditThread(id) {
+  const t = F.thread;
+  if(!t) return;
+  openModal(`
+    <h2 style="font-family:var(--font-d);font-size:20px;font-weight:800;margin-bottom:18px">${SVG.edit} Изменить тему</h2>
+    <div class="form-group"><label class="form-label">Заголовок</label>
+      <input class="form-input" id="et-title" value="${esc(t.title||'')}" />
+    </div>
+    <div class="form-group"><label class="form-label">Текст</label>
+      <textarea class="form-input" id="et-body" rows="5">${esc(t.body||t.content||'')}</textarea>
+    </div>
+    <button class="btn-primary w-full" style="margin-top:6px" onclick="saveEditThread('${id}')">Сохранить</button>
+  `);
+}
+
+async function saveEditThread(id) {
+  const title = v('et-title'), body = v('et-body');
+  if(!title||!body) return toast('Заполни все поля','error');
+  const {error} = await sb.from('forum_threads').update({title,body}).eq('id',id);
+  if(error) return toast('Ошибка: '+error.message,'error');
+  closeModal(); toast('Тема обновлена','success');
+  openThread(id);
+}
+
+const PREFIX_LIST = ['Вопрос','Объявление','Обсуждение','Флуд','Важно','Новость','Идея'];
+
+function openSetPrefix(id, current) {
+  openModal(`
+    <h2 style="font-family:var(--font-d);font-size:20px;font-weight:800;margin-bottom:18px">🏷️ Префикс темы</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
+      <button class="thread-badge badge-prefix" style="cursor:pointer;padding:6px 14px;font-size:12px;background:var(--bg3);color:var(--muted);border:1px solid var(--border)" onclick="applyPrefix('${id}','')">
+        Без префикса
+      </button>
+      ${PREFIX_LIST.map(p=>`
+        <button class="thread-badge badge-prefix" onclick="applyPrefix('${id}','${p}')"
+          style="cursor:pointer;padding:6px 14px;font-size:12px;
+            background:${prefixColor(p)+'22'};color:${prefixColor(p)};
+            border:1px solid ${prefixColor(p)+'44'};
+            ${current===p?'outline:2px solid '+prefixColor(p)+';':''}"
+        >${p}</button>
+      `).join('')}
+    </div>
+    <div class="form-group">
+      <label class="form-label">Свой префикс</label>
+      <input class="form-input" id="custom-prefix" placeholder="Введи свой..." value="${current&&!PREFIX_LIST.includes(current)?current:''}" />
+    </div>
+    <button class="btn-primary w-full" onclick="applyPrefix('${id}',v('custom-prefix')||document.getElementById('custom-prefix').value)">Применить</button>
+  `);
+}
+
+async function applyPrefix(id, prefix) {
+  const {error} = await sb.from('forum_threads').update({prefix:prefix||null}).eq('id',id);
+  if(error) return toast('Ошибка: '+error.message,'error');
+  closeModal(); toast(prefix?`Префикс "${prefix}" установлен`:'Префикс убран','success');
+  openThread(id);
+}
+
+async function modDeleteThread(id) {
+  if(!confirm('Удалить тему со всеми ответами?')) return;
+  await sb.from('forum_posts').delete().eq('thread_id',id);
+  await sb.from('forum_threads').delete().eq('id',id);
+  toast('Тема удалена','info');
+  forumList();
 }
 
 async function submitReply(tid) { return doReply(tid); }
@@ -1484,4 +1629,3 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
 </script>
 </body>
 </html>
-
