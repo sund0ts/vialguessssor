@@ -265,8 +265,28 @@ select.form-input{cursor:pointer}
 .thread-item.is-pinned{border-color:rgba(255,215,0,.2);background:linear-gradient(90deg,rgba(255,215,0,.03),var(--bg2))}
 .thread-item.is-closed{opacity:.7}
 .thread-item.is-closed .t-title{color:var(--muted)}
-.thread-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:12px 14px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border)}
-.thread-actions button{font-size:11px;padding:5px 12px}
+.thread-actions{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin-bottom:14px;padding:8px 12px;
+  background:var(--bg2);border-radius:var(--radius-sm);
+  border:1px solid var(--border);
+}
+.mod-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:none;border:1px solid var(--border);
+  color:var(--muted);font-family:var(--font-b);
+  font-size:11.5px;font-weight:500;
+  padding:5px 11px;border-radius:7px;
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.mod-btn:hover{background:rgba(255,255,255,.06);color:var(--text);border-color:var(--border2)}
+.mod-btn svg{width:12px;height:12px;flex-shrink:0}
+.mod-btn.active{color:var(--accent);border-color:rgba(124,106,255,.4);background:rgba(124,106,255,.08)}
+.mod-btn.pin-active{color:#ffd700;border-color:rgba(255,215,0,.35);background:rgba(255,215,0,.07)}
+.mod-btn.close-active{color:var(--accent2);border-color:rgba(255,79,122,.35);background:rgba(255,79,122,.07)}
+.mod-btn.danger{color:var(--accent2);border-color:rgba(255,79,122,.25)}
+.mod-btn.danger:hover{background:rgba(255,79,122,.1);border-color:rgba(255,79,122,.45)}
+.mod-sep{width:1px;height:20px;background:var(--border);flex-shrink:0;margin:0 2px}
 
 /* ── TOP ── */
 .top-wrap{padding:40px 32px;max-width:860px;margin:0 auto}
@@ -944,7 +964,11 @@ async function renderForum() {
 }
 
 async function loadCats() {
-  let {data}=await sb.from('forum_categories').select('*').order('created_at');
+  let data = null;
+  try {
+    const res = await fetchWithTimeout(sb.from('forum_categories').select('*').order('created_at').then(r=>r));
+    data = res.data;
+  } catch(e) { data = null; }
   if(!data||!data.length){
     await sb.from('forum_categories').insert(DEFAULT_CATS.map(c=>({id:c.id,name:c.name})));
     data=DEFAULT_CATS;
@@ -970,11 +994,26 @@ async function forumList() {
   const back=document.getElementById('f-back'); if(back)back.classList.add('hidden');
   const nb=document.getElementById('f-new'); if(nb)nb.classList.remove('hidden');
   document.getElementById('f-title').textContent=F.cat?.name||'Форум';
-  const {data}=await sb.from('forum_threads')
-    .select('*,profiles(username,role,avatar_url)')
-    .eq('category_id',F.cat?.id)
-    .order('created_at',{ascending:false});
   const body=document.getElementById('f-body');
+  body.innerHTML=`<div style="padding:32px;text-align:center"><div style="width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto"></div></div>`;
+
+  let data = null;
+  try {
+    data = await fetchWithTimeout(
+      sb.from('forum_threads')
+        .select('*,profiles(username,role,avatar_url)')
+        .eq('category_id',F.cat?.id)
+        .order('created_at',{ascending:false})
+        .then(r => r.data)
+    );
+  } catch(e) {
+    body.innerHTML=`<div style="text-align:center;padding:40px 24px">
+      <p class="text-muted" style="font-size:14px;margin-bottom:12px">${e.message==='timeout'?'Форум не отвечает. Проверь соединение.':'Ошибка загрузки: '+e.message}</p>
+      <button class="btn-ghost" onclick="forumList()">Повторить</button>
+    </div>`;
+    return;
+  }
+
   if(!data||!data.length){
     body.innerHTML=`<div class="empty-state">${SVG.chat}<p>Тут пусто — создай первую тему!</p></div>`; return;
   }
@@ -1007,37 +1046,66 @@ function prefixColor(prefix) {
   return map[prefix] || '#8080a0';
 }
 
+// Helper: fetch with timeout
+async function fetchWithTimeout(promise, ms=8000) {
+  return Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))
+  ]);
+}
+
 async function openThread(id) {
   const body = document.getElementById('f-body');
   if(!body) return;
-  // Show loading
-  body.innerHTML = `<div style="padding:40px;text-align:center"><div style="width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>`;
+
+  body.innerHTML = `<div style="padding:44px;text-align:center">
+    <div style="width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px"></div>
+    <div style="font-size:12px;color:var(--muted)">Загружаем тему...</div>
+  </div>`;
 
   document.getElementById('f-back')?.classList.remove('hidden');
   document.getElementById('f-new')?.classList.add('hidden');
 
-  // Fire-and-forget — views increment (never blocks)
-  setTimeout(()=> sb.rpc('increment_thread_views',{thread_id:id}).catch(()=>{}), 0);
-
-  // Load thread and posts independently so one failure doesn't kill the other
+  // parallel fetch — thread + posts at the same time, 8s timeout each
   let t = null, posts = [];
   try {
-    const res = await sb.from('forum_threads')
-      .select('*,profiles(username,role,avatar_url)')
-      .eq('id', id)
-      .single();
-    t = res.data;
-  } catch(e) { console.warn('thread load error', e); }
+    [t, posts] = await Promise.all([
+      fetchWithTimeout(
+        sb.from('forum_threads')
+          .select('*,profiles(username,role,avatar_url)')
+          .eq('id', id).single()
+          .then(r => { if(r.error) throw r.error; return r.data; })
+      ),
+      fetchWithTimeout(
+        sb.from('forum_posts')
+          .select('*,profiles(username,role,avatar_url)')
+          .eq('thread_id', id).order('created_at')
+          .then(r => r.data || [])
+      ).catch(()=>[])
+    ]);
+  } catch(e) {
+    const msg = e.message === 'timeout'
+      ? 'Тема загружается слишком долго. Проверь соединение и попробуй снова.'
+      : 'Не удалось загрузить тему: ' + e.message;
+    body.innerHTML = `
+      <div style="text-align:center;padding:48px 24px">
+        <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+        <p style="color:var(--muted);margin-bottom:16px;font-size:14px">${msg}</p>
+        <button class="btn-ghost" onclick="openThread('${id}')">Попробовать снова</button>
+      </div>`;
+    return;
+  }
 
-  try {
-    const res = await sb.from('forum_posts')
-      .select('*,profiles(username,role,avatar_url)')
-      .eq('thread_id', id)
-      .order('created_at');
-    posts = res.data || [];
-  } catch(e) { console.warn('posts load error', e); }
+  if(!t){
+    body.innerHTML=`<div style="text-align:center;padding:48px 24px">
+      <p class="text-muted" style="font-size:14px">Тема не найдена или нет доступа</p>
+      <button class="btn-ghost" style="margin-top:12px" onclick="forumList()">← К списку</button>
+    </div>`;
+    return;
+  }
 
-  if(!t){ body.innerHTML=`<p class="text-muted text-center" style="padding:40px">Тема не найдена или нет доступа</p>`; return; }
+  // fire-and-forget views (after render)
+  setTimeout(()=> sb.rpc('increment_thread_views',{thread_id:id}).catch(()=>{}), 200);
 
   F.thread=t;
   const titleEl = document.getElementById('f-title');
@@ -1047,34 +1115,41 @@ async function openThread(id) {
   const isMod = canMod(curProfile?.role);
   const isAuthor = curUser && t.user_id === curUser.id;
 
-  // Mod actions bar
-  const modBar = (isMod) ? `
+  // ── compact mod toolbar ──
+  const svgPin   = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+  const svgLock  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+  const svgUnlk  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`;
+  const svgEdit2 = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+  const svgTag   = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`;
+  const svgTrash = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+
+  const prefixLabel = t.prefix
+    ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:${prefixColor(t.prefix)+'22'};color:${prefixColor(t.prefix)};border:1px solid ${prefixColor(t.prefix)+'44'};margin-right:2px">${esc(t.prefix)}</span>`
+    : '';
+
+  const modBar = isMod ? `
     <div class="thread-actions">
-      <button class="btn-ghost" onclick="togglePin('${id}',${!!t.is_pinned})">
-        ${t.is_pinned
-          ? `${SVG.pin.replace('width="24"','width="13"').replace('height="24"','height="13"')} Открепить`
-          : `${SVG.pin.replace('width="24"','width="13"').replace('height="24"','height="13"')} Закрепить`}
+      <button class="mod-btn ${t.is_pinned?'pin-active':''}" onclick="togglePin('${id}',${!!t.is_pinned})" title="${t.is_pinned?'Открепить':'Закрепить'}">
+        ${svgPin} ${t.is_pinned?'Открепить':'Закрепить'}
       </button>
-      <button class="btn-ghost" onclick="toggleClose('${id}',${!!t.is_closed})">
-        ${t.is_closed
-          ? `${SVG.check.replace('width="24"','width="13"').replace('height="24"','height="13"')} Открыть`
-          : `${SVG.x.replace('width="24"','width="13"').replace('height="24"','height="13"')} Закрыть`}
+      <button class="mod-btn ${t.is_closed?'close-active':''}" onclick="toggleClose('${id}',${!!t.is_closed})" title="${t.is_closed?'Открыть тему':'Закрыть тему'}">
+        ${t.is_closed?svgUnlk:svgLock} ${t.is_closed?'Открыть':'Закрыть'}
       </button>
-      <button class="btn-ghost" onclick="openEditThread('${id}')">
-        ${SVG.edit.replace('width="24"','width="13"').replace('height="24"','height="13"')} Изменить
+      <div class="mod-sep"></div>
+      <button class="mod-btn" onclick="openEditThread('${id}')" title="Изменить тему">
+        ${svgEdit2} Изменить
       </button>
-      <button class="btn-ghost" onclick="openSetPrefix('${id}','${esc(t.prefix||'')}')">
-        🏷️ Префикс
+      <button class="mod-btn" onclick="openSetPrefix('${id}','${esc(t.prefix||'')}')" title="Установить префикс">
+        ${svgTag} ${t.prefix?prefixLabel:'Префикс'}
       </button>
-      <button class="btn-danger btn-sm" onclick="modDeleteThread('${id}')">
-        ${SVG.x.replace('width="24"','width="13"').replace('height="24"','height="13"')} Удалить тему
+      <div class="mod-sep"></div>
+      <button class="mod-btn danger" onclick="modDeleteThread('${id}')" title="Удалить тему">
+        ${svgTrash} Удалить
       </button>
     </div>
   ` : (isAuthor ? `
     <div class="thread-actions">
-      <button class="btn-ghost" onclick="openEditThread('${id}')">
-        ${SVG.edit.replace('width="24"','width="13"').replace('height="24"','height="13"')} Изменить тему
-      </button>
+      <button class="mod-btn" onclick="openEditThread('${id}')">${svgEdit2} Изменить тему</button>
     </div>
   ` : '');
 
