@@ -62,8 +62,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-size:
 /* ── MODAL ── */
 #modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center}
 #modal-overlay.hidden{display:none}
-#modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:32px;width:430px;max-width:95vw;position:relative;box-shadow:0 28px 80px rgba(0,0,0,.65)}
-#modal-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.06);border:none;color:var(--muted);font-size:16px;width:30px;height:30px;border-radius:50%;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center}
+#modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:32px;width:430px;max-width:95vw;position:relative;box-shadow:0 28px 80px rgba(0,0,0,.65);overflow:hidden}
+#modal-box.wide{width:700px}
+#modal-close{position:absolute;top:16px;right:16px;z-index:10;background:rgba(10,10,12,.7);border:1px solid var(--border2);color:var(--muted);font-size:16px;width:30px;height:30px;border-radius:50%;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center}
 #modal-close:hover{background:rgba(255,255,255,.12);color:var(--text)}
 
 /* ── FORMS ── */
@@ -1936,10 +1937,10 @@ async function refreshNotifBadge() {
 // =============================================
 async function openUserProfile(username) {
   if(!username) return;
-  openModal(`<div style="text-align:center;padding:32px"><div style="width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto"></div></div>`);
+  openModal(`<div style="text-align:center;padding:32px"><div style="width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto"></div></div>`, true);
 
   const {data:prof} = await sb.from('profiles').select('*').eq('username',username).single();
-  if(!prof) { openModal(`<p style="text-align:center;padding:24px;color:var(--muted)">Пользователь не найден</p>`); return; }
+  if(!prof) { openModal(`<p style="text-align:center;padding:24px;color:var(--muted)">Пользователь не найден</p>`, true); return; }
 
   // Load followers/following counts
   const [{count:followersCount},{count:followingCount}] = await Promise.all([
@@ -2193,60 +2194,133 @@ async function renderProfile() {
       return;
     }
   }
-  const p=curProfile;
+  const p = curProfile;
+
+  // Load follow counts
+  const [{count:followersC},{count:followingC}] = await Promise.all([
+    sb.from('follows').select('id',{count:'exact',head:true}).eq('following_id',p.id),
+    sb.from('follows').select('id',{count:'exact',head:true}).eq('follower_id',p.id),
+  ]).catch(()=>[{count:0},{count:0}]);
+
   page.innerHTML=`
     <div class="profile-wrap">
-      <div class="profile-header-card">
-        <div class="p-avatar" style="${p.avatar_url?'background:none;box-shadow:none;overflow:hidden':''}">
-          ${p.avatar_url
-            ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`
-            : SVG.user}
+
+      <!-- COVER + AVATAR -->
+      <div style="background:linear-gradient(135deg,rgba(124,106,255,.3),rgba(255,79,122,.2));height:90px;border-radius:var(--radius) var(--radius) 0 0;position:relative;margin-bottom:48px">
+        <div class="p-avatar" style="position:absolute;bottom:-36px;left:28px;width:78px;height:78px;border:3px solid var(--bg);${p.avatar_url?'background:none;overflow:hidden':''}">
+          ${p.avatar_url?`<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`:SVG.user}
         </div>
-        <div class="p-info">
-          <div class="p-name">${esc(p.username)} ${roleBadge(p.role)}</div>
-          <div class="p-email">${curUser.email}</div>
-          <div class="p-stats">
-            <div><div class="p-stat-val">${p.games_played||0}</div><div class="p-stat-label">Игр</div></div>
-            <div><div class="p-stat-val">${p.best_score||0}</div><div class="p-stat-label">Лучший</div></div>
-            <div><div class="p-stat-val">${p.total_score||0}</div><div class="p-stat-label">Всего</div></div>
-          </div>
-        </div>
-        <button class="btn-ghost btn-sm" onclick="openEditProfile()">${SVG.edit} Изменить</button>
-      </div>
-      <div class="profile-grid">
-        <div class="card">
-          <div class="card-title">${SVG.game} Последние игры</div>
-          <div id="p-games"><div class="text-muted text-sm">Загрузка...</div></div>
-        </div>
-        <div class="card">
-          <div class="card-title">${SVG.camera} Аватар</div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
-            <div id="avatar-preview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid var(--border2);flex-shrink:0">
-              ${p.avatar_url
-                ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover" />`
-                : `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`}
-            </div>
-            <div style="text-align:center">
-              <label style="cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:rgba(124,106,255,.12);border:1px solid rgba(124,106,255,.3);color:var(--accent);padding:8px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:all .18s" onmouseover="this.style.background='rgba(124,106,255,.22)'" onmouseout="this.style.background='rgba(124,106,255,.12)'">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                Загрузить фото
-                <input type="file" accept="image/*" style="display:none" onchange="uploadAvatar(event)" />
-              </label>
-              <p class="text-muted text-sm" style="margin-top:8px">JPG, PNG до 2MB</p>
-            </div>
-            <div id="avatar-upload-progress" style="display:none;width:100%">
-              <div style="height:3px;background:var(--bg3);border-radius:99px;overflow:hidden">
-                <div id="avatar-prog-bar" style="height:100%;background:var(--accent);border-radius:99px;width:0%;transition:width .3s"></div>
-              </div>
-            </div>
-          </div>
+        <div style="position:absolute;bottom:-36px;right:20px;display:flex;gap:8px">
+          <button class="btn-ghost btn-sm" onclick="openEditProfile()">${SVG.edit} Изменить</button>
+          <button class="btn-danger btn-sm" onclick="doLogout()">${SVG.logout} Выйти</button>
         </div>
       </div>
-      ${canRoles(p.role)?renderRolePanel():''}
-      ${canApprove(p.role)?renderAdminPanelHTML():''}
+
+      <!-- INFO -->
+      <div style="padding:0 28px 20px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+          <div style="font-family:var(--font-d);font-size:22px;font-weight:800">${esc(p.username)}</div>
+          ${roleBadge(p.role)}
+        </div>
+        <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${curUser.email}</div>
+        <div style="font-size:13.5px;color:var(--muted);margin-bottom:16px;min-height:16px">${esc(p.bio||'Нет описания')}</div>
+
+        <!-- STATS ROW -->
+        <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px">
+          <div><div style="font-family:var(--font-d);font-size:20px;font-weight:700;color:var(--accent)">${p.post_count||0}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Сообщений</div></div>
+          <div style="cursor:pointer" onclick="showMyTab('followers')"><div style="font-family:var(--font-d);font-size:20px;font-weight:700">${followersC||0}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Подписчиков</div></div>
+          <div style="cursor:pointer" onclick="showMyTab('following')"><div style="font-family:var(--font-d);font-size:20px;font-weight:700">${followingC||0}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Подписок</div></div>
+          <div><div style="font-family:var(--font-d);font-size:20px;font-weight:700;color:var(--accent)">${p.games_played||0}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Игр</div></div>
+          <div><div style="font-family:var(--font-d);font-size:20px;font-weight:700;color:var(--accent)">${p.best_score||0}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Лучший счёт</div></div>
+        </div>
+      </div>
+
+      <!-- TABS -->
+      <div style="display:flex;border-bottom:1px solid var(--border);padding:0 28px;margin-bottom:20px">
+        <button class="uprofile-tab active" id="mytab-btn-posts" onclick="showMyTab('posts')">Публикации</button>
+        <button class="uprofile-tab" id="mytab-btn-games" onclick="showMyTab('games')">Игры</button>
+        <button class="uprofile-tab" id="mytab-btn-followers" onclick="showMyTab('followers')">Подписчики</button>
+        <button class="uprofile-tab" id="mytab-btn-following" onclick="showMyTab('following')">Подписки</button>
+        <button class="uprofile-tab" id="mytab-btn-avatar" onclick="showMyTab('avatar')">Аватар</button>
+        ${canRoles(p.role)?`<button class="uprofile-tab" id="mytab-btn-roles" onclick="showMyTab('roles')">Роли</button>`:''}
+        ${canApprove(p.role)?`<button class="uprofile-tab" id="mytab-btn-admin" onclick="showMyTab('admin')">Точки</button>`:''}
+      </div>
+
+      <!-- TAB BODY -->
+      <div id="my-tab-body" style="padding:0 28px 40px;min-height:200px">
+        <div class="text-muted text-sm">Загрузка...</div>
+      </div>
+
     </div>`;
-  loadRecentGames();
-  if(canApprove(p.role))loadAdminPending();
+
+  showMyTab('posts');
+}
+
+async function showMyTab(tab) {
+  // update active button
+  document.querySelectorAll('[id^="mytab-btn-"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mytab-btn-'+tab)?.classList.add('active');
+  const body = document.getElementById('my-tab-body');
+  if(!body) return;
+  body.innerHTML=`<div style="padding:20px;text-align:center"><div style="width:22px;height:22px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:auto"></div></div>`;
+
+  if(tab==='posts') {
+    const {data} = await sb.from('forum_threads').select('id,title,reply_count,views,created_at,prefix').eq('user_id',curUser.id).order('created_at',{ascending:false}).limit(30);
+    if(!data||!data.length){body.innerHTML=`<p class="text-muted text-sm">Нет публикаций</p>`;return;}
+    body.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px">`+data.map(t=>`
+      <div class="upost-item" onclick="showPage('forum');setTimeout(()=>openThread('${t.id}'),300)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          ${t.prefix?`<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:${prefixColor(t.prefix)+'22'};color:${prefixColor(t.prefix)}">${esc(t.prefix)}</span>`:''}
+          <div class="upost-title">${esc(t.title)}</div>
+        </div>
+        <div class="upost-meta">${timeAgo(t.created_at)} · ${t.reply_count||0} ответов · ${t.views||0} просмотров</div>
+      </div>`).join('')+`</div>`;
+  }
+  else if(tab==='games') {
+    const {data} = await sb.from('game_scores').select('*').eq('user_id',curUser.id).order('created_at',{ascending:false}).limit(20);
+    if(!data||!data.length){body.innerHTML=`<p class="text-muted text-sm">Нет сыгранных игр</p>`;return;}
+    body.innerHTML=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">`+
+      data.map((g,i)=>`<div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:16px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px${i===data.length-1?';border-bottom:none':''}">
+        <span style="color:var(--muted);font-size:12px">${new Date(g.created_at).toLocaleDateString('ru-RU')}</span>
+        <span style="color:var(--muted)">${g.rounds} раундов</span>
+        <span style="font-family:var(--font-d);font-weight:700;color:var(--accent)">${g.score} pts</span>
+        <span style="font-size:11px;color:var(--muted)">${Math.round(g.score/g.rounds)} avg</span>
+      </div>`).join('')+`</div>`;
+  }
+  else if(tab==='followers') {
+    const {data} = await sb.from('follows').select('follower_id,profiles!follows_follower_id_fkey(username,role,avatar_url)').eq('following_id',curUser.id);
+    body.innerHTML=renderFollowList(data||[],'follower_id') || `<p class="text-muted text-sm">Нет подписчиков</p>`;
+  }
+  else if(tab==='following') {
+    const {data} = await sb.from('follows').select('following_id,profiles!follows_following_id_fkey(username,role,avatar_url)').eq('follower_id',curUser.id);
+    body.innerHTML=renderFollowList(data||[],'following_id') || `<p class="text-muted text-sm">Нет подписок</p>`;
+  }
+  else if(tab==='avatar') {
+    const p=curProfile;
+    body.innerHTML=`<div style="display:flex;flex-direction:column;align-items:flex-start;gap:16px;max-width:320px">
+      <div id="avatar-preview" style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;overflow:hidden;border:3px solid var(--border2)">
+        ${p.avatar_url?`<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover"/>`:SVG.user}
+      </div>
+      <label style="cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:rgba(124,106,255,.12);border:1px solid rgba(124,106,255,.3);color:var(--accent);padding:9px 20px;border-radius:var(--radius-sm);font-size:13px;font-weight:600">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Загрузить фото
+        <input type="file" accept="image/*" style="display:none" onchange="uploadAvatar(event)"/>
+      </label>
+      <p class="text-muted text-sm">JPG, PNG до 2MB</p>
+      <div id="avatar-upload-progress" style="display:none;width:100%">
+        <div style="height:3px;background:var(--bg3);border-radius:99px;overflow:hidden">
+          <div id="avatar-prog-bar" style="height:100%;background:var(--accent);border-radius:99px;width:0%;transition:width .3s"></div>
+        </div>
+      </div>
+    </div>`;
+  }
+  else if(tab==='roles') {
+    body.innerHTML=renderRolePanel();
+  }
+  else if(tab==='admin') {
+    body.innerHTML=`<div class="admin-title">${SVG.map} Точки на проверке</div><div id="p-pending">Загрузка...</div>`;
+    loadAdminPending();
+  }
 }
 
 function renderRolePanel() {
@@ -2393,9 +2467,11 @@ function showPage(name) {
   curPage=name; PAGES[name](); window.scrollTo(0,0);
 }
 
-function openModal(html) {
+function openModal(html, wide=false) {
   document.getElementById('modal-content').innerHTML=html;
   document.getElementById('modal-overlay').classList.remove('hidden');
+  const box = document.getElementById('modal-box');
+  box.classList.toggle('wide', wide);
 }
 function closeModal() {
   document.getElementById('modal-overlay').classList.add('hidden');
