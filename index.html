@@ -207,27 +207,75 @@ select.form-input{cursor:pointer}
 .suggest-section{margin-top:28px;padding:0 32px 32px}
 
 /* ── FORUM ── */
-.forum-wrap{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 58px)}
-.forum-sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:22px 14px}
-.sidebar-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding:0 8px}
-.cat-btn{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;color:var(--muted);font-family:var(--font-b);font-size:13.5px;padding:9px 11px;border-radius:var(--radius-sm);cursor:pointer;text-align:left;transition:all .15s;margin-bottom:2px}
-.cat-btn:hover{background:rgba(255,255,255,.05);color:var(--text)}
-.cat-btn.active{background:rgba(124,106,255,.12);color:var(--text)}
-.cat-btn svg{width:15px;height:15px;flex-shrink:0;opacity:.6}
-.forum-main{padding:26px 30px}
-.forum-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
-.forum-h{font-family:var(--font-d);font-size:22px;font-weight:800}
-.thread-list{display:flex;flex-direction:column;gap:8px}
-.thread-item{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;cursor:pointer;transition:all .15s}
-.thread-item:hover{border-color:var(--border2);background:var(--bg3)}
-.t-avatar{width:36px;height:36px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.t-avatar svg{width:18px;height:18px;color:var(--muted)}
-.t-info{flex:1;min-width:0}
-.t-title{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.t-meta{font-size:11.5px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.t-stats{display:flex;gap:14px;flex-shrink:0;font-size:12px;color:var(--muted)}
-.t-stat{display:flex;align-items:center;gap:5px}
-.t-stat svg{width:13px;height:13px}
+.forum-page{max-width:1100px;margin:0 auto;padding:24px 24px 40px}
+.forum-section{margin-bottom:28px}
+.forum-section-title{
+  font-family:var(--font-d);font-size:13px;font-weight:700;
+  color:var(--muted);letter-spacing:.06em;text-transform:uppercase;
+  padding:0 4px;margin-bottom:8px;
+}
+.forum-cats-block{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;
+}
+/* Category row */
+.fcat-row{
+  display:grid;grid-template-columns:auto 1fr auto auto;
+  align-items:center;gap:14px;
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .15s;
+}
+.fcat-row:last-child{border-bottom:none}
+.fcat-row:hover{background:rgba(255,255,255,.03)}
+.fcat-row.fcat-active{background:rgba(124,106,255,.06)}
+.fcat-icon{
+  width:38px;height:38px;border-radius:10px;
+  background:rgba(124,106,255,.1);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.fcat-icon svg{width:18px;height:18px;color:var(--accent)}
+.fcat-info{min-width:0}
+.fcat-name{font-weight:600;font-size:14.5px;color:var(--text)}
+.fcat-desc{font-size:12px;color:var(--muted);margin-top:2px}
+.fcat-count{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.fcat-count svg{width:13px;height:13px}
+.fcat-last{text-align:right;min-width:160px;flex-shrink:0}
+.fcat-last-title{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.fcat-last-meta{font-size:11px;color:var(--muted);margin-top:2px}
+/* Thread list (inside category) */
+.forum-thread-page{max-width:1100px;margin:0 auto;padding:20px 24px 40px}
+.forum-topbar2{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.forum-breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.forum-breadcrumb span{color:var(--text);font-weight:500}
+.forum-breadcrumb-sep{opacity:.4}
+.thread-table{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.thread-table-head{
+  display:grid;grid-template-columns:1fr 80px 80px 200px;
+  padding:9px 16px;border-bottom:1px solid var(--border);
+  font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--muted);
+}
+.thread-row{
+  display:grid;grid-template-columns:1fr 80px 80px 200px;
+  align-items:center;gap:0;
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .15s;
+}
+.thread-row:last-child{border-bottom:none}
+.thread-row:hover{background:rgba(255,255,255,.025)}
+.thread-row.is-pinned{background:linear-gradient(90deg,rgba(255,215,0,.03),transparent)}
+.thread-row.is-closed .tr-title-text{color:var(--muted)}
+.tr-left{min-width:0;padding-right:12px}
+.tr-title-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.tr-title-text{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-meta{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.tr-num{font-size:13px;color:var(--muted);text-align:center;padding:0 4px}
+.tr-last{padding-left:12px;border-left:1px solid var(--border)}
+.tr-last-title{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.tr-last-meta{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.tr-last-av{width:18px;height:18px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.tr-last-av svg{width:11px;height:11px;color:var(--muted)}
+.tr-last-av img{width:100%;height:100%;object-fit:cover}
 .post-list{display:flex;flex-direction:column;gap:10px;margin-top:20px}
 .post-item{
   background:var(--bg2);border:1px solid var(--border);
@@ -746,6 +794,11 @@ function renderGame() {
             </div>
             <button class="btn-primary w-full" style="padding:13px" id="g-confirm" onclick="confirmGuess()" disabled>Подтвердить</button>
           </div>
+          <!-- inline result bar — shown after guess -->
+          <div id="g-round-result" style="display:none;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:14px 18px;margin-top:12px">
+          </div>
+          <div style="display:none"><!-- close sidebar -->
+          </div>
         </div>
       </div>
       <div id="gs-result" style="display:none"></div>
@@ -826,23 +879,38 @@ function confirmGuess() {
   const dist = Math.round(actual.distanceTo(G.guess));
   const pts = Math.max(0, Math.round(5000 - dist*10));
   G.score += pts; G.results.push({round:G.round,dist,score:pts});
-  L.marker([actual.lat,actual.lng],{icon:L.divIcon({html:'<div style="width:14px;height:14px;background:#ff4f7a;border:2px solid #fff;border-radius:50%"></div>',iconSize:[14,14],iconAnchor:[7,7],className:''})}).addTo(G.gmap);
+
+  // Draw answer on map
+  L.marker([actual.lat,actual.lng],{icon:L.divIcon({html:'<div style="width:14px;height:14px;background:#ff4f7a;border:2px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(255,79,122,.8)"></div>',iconSize:[14,14],iconAnchor:[7,7],className:''})}).addTo(G.gmap);
   L.polyline([G.guess,actual],{color:'#7c6aff',weight:2,dashArray:'5'}).addTo(G.gmap);
   document.getElementById('g-confirm').disabled=true;
   document.getElementById('g-score').textContent=G.score+' pts';
-  const emoji = dist<50?'🎯':dist<200?'🔥':dist<500?'👌':'😬';
-  openModal(`
-    <div style="text-align:center">
-      <div style="font-size:52px;margin-bottom:10px">${emoji}</div>
-      <h2 style="font-family:var(--font-d);font-size:28px;font-weight:800;margin-bottom:4px">+${pts} очков</h2>
-      <p class="text-muted" style="margin-bottom:24px">${dist<50?'Точное попадание!':dist<200?'Отлично!':dist<500?'Неплохо':'Промах'} · ${dist} м от цели</p>
-      <button class="btn-primary w-full" style="padding:12px" onclick="nextRound()">${G.round<G.total?'Следующий раунд →':'Результаты'}</button>
-    </div>
-  `);
+
+  // Show inline result overlay (avoids Leaflet z-index conflict with modal)
+  const label = dist<50?'Точное попадание!':dist<200?'Отлично!':dist<500?'Неплохо':'Промах';
+  const accent = dist<50?'#00e5a0':dist<200?'#7c6aff':dist<500?'#ff9f43':'#ff4f7a';
+  const bar = document.getElementById('g-round-result');
+  if(bar) {
+    bar.style.display='flex';
+    bar.innerHTML=`
+      <div style="display:flex;align-items:center;gap:14px;flex:1;flex-wrap:wrap">
+        <div style="font-size:28px;line-height:1">${dist<50?'🎯':dist<200?'🔥':dist<500?'👌':'😬'}</div>
+        <div>
+          <div style="font-family:var(--font-d);font-size:20px;font-weight:800;color:${accent}">+${pts} очков</div>
+          <div style="font-size:12px;color:var(--muted)">${label} · ${dist} м от цели</div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="nextRound()" style="flex-shrink:0;padding:9px 20px">
+        ${G.round<G.total?'Следующий раунд →':'Результаты'}
+      </button>
+    `;
+  }
 }
 
 function nextRound() {
   closeModal();
+  const bar = document.getElementById('g-round-result');
+  if(bar) bar.style.display='none';
   if(G.round>=G.total){showFinalResults();return;}
   G.round++; loadRound();
 }
@@ -942,24 +1010,7 @@ let F = { cats:[], cat:null, thread:null };
 const DEFAULT_CATS = [{id:'lounge',name:'Курилка'},{id:'discuss',name:'Обсуждение'}];
 
 async function renderForum() {
-  document.getElementById('page-forum').innerHTML=`
-    <div class="forum-wrap">
-      <aside class="forum-sidebar">
-        <div class="sidebar-label">Разделы</div>
-        <div id="f-cats"></div>
-        ${curUser&&canCats(curProfile?.role)?`<button class="cat-btn" style="color:var(--accent);margin-top:6px" onclick="openAddCat()">${SVG.plus} Новый раздел</button>`:''}
-      </aside>
-      <div class="forum-main">
-        <div class="forum-topbar">
-          <div class="forum-h" id="f-title">Форум</div>
-          <div style="display:flex;gap:8px">
-            <button class="btn-ghost btn-sm hidden" id="f-back" onclick="forumList()">← Назад</button>
-            ${curUser?`<button class="btn-primary btn-sm" id="f-new" onclick="openNewThread()">${SVG.plus} Новая тема</button>`:''}
-          </div>
-        </div>
-        <div id="f-body"></div>
-      </div>
-    </div>`;
+  document.getElementById('page-forum').innerHTML=`<div id="f-body" class="forum-page"></div>`;
   await loadCats();
 }
 
@@ -973,27 +1024,89 @@ async function loadCats() {
     await sb.from('forum_categories').insert(DEFAULT_CATS.map(c=>({id:c.id,name:c.name})));
     data=DEFAULT_CATS;
   }
-  F.cats=data; renderCats();
-  if(!F.cat){F.cat=data[0];forumList();}
+  F.cats=data;
+  // Show main forum index (all categories)
+  showForumIndex();
 }
 
-function renderCats() {
-  const el=document.getElementById('f-cats'); if(!el)return;
-  el.innerHTML=F.cats.map(c=>`
-    <button class="cat-btn ${F.cat?.id===c.id?'active':''}" onclick="selCat('${c.id}')">
-      ${c.id==='lounge'?SVG.smoke:SVG.disc} ${esc(c.name)}
-    </button>`).join('');
-}
-
+function renderCats() { /* legacy no-op */ }
 function selCat(id) {
-  F.cat=F.cats.find(c=>c.id===id); F.thread=null; renderCats(); forumList();
+  F.cat=F.cats.find(c=>c.id===id); F.thread=null; forumList();
+}
+
+// Main forum page: show all categories as sections
+async function showForumIndex() {
+  F.cat = null; F.thread = null;
+  const body = document.getElementById('f-body');
+  if(!body) return;
+
+  // Load thread counts + last post per category
+  body.innerHTML = `<div style="padding:32px;text-align:center"><div style="width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto"></div></div>`;
+
+  // Get all threads to compute stats per category
+  let allThreads = [];
+  try {
+    const r = await fetchWithTimeout(
+      sb.from('forum_threads')
+        .select('id,title,category_id,reply_count,created_at,profiles(username,avatar_url)')
+        .order('created_at',{ascending:false})
+        .then(r=>r.data||[])
+    );
+    allThreads = r;
+  } catch(e) {}
+
+  const catIcon = id => id==='lounge'?SVG.smoke:SVG.disc;
+
+  const sections = F.cats.map(cat => {
+    const threads = allThreads.filter(t=>t.category_id===cat.id);
+    const last = threads[0];
+    const totalReplies = threads.reduce((s,t)=>s+(t.reply_count||0),0);
+    return {cat, threads, last, totalReplies};
+  });
+
+  body.innerHTML = `
+    <div class="forum-page">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div style="font-family:var(--font-d);font-size:22px;font-weight:800">Форум</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${curUser&&canCats(curProfile?.role)?`<button class="btn-ghost btn-sm" onclick="openAddCat()">${SVG.plus} Раздел</button>`:''}
+          ${curUser?`<button class="btn-primary btn-sm" onclick="openNewThreadGlobal()">${SVG.plus} Новая тема</button>`:''}
+        </div>
+      </div>
+      <div class="forum-section">
+        <div class="forum-cats-block">
+          ${sections.map(({cat,threads,last,totalReplies})=>`
+            <div class="fcat-row" onclick="selCat('${cat.id}')">
+              <div class="fcat-icon">${catIcon(cat.id)}</div>
+              <div class="fcat-info">
+                <div class="fcat-name">${esc(cat.name)}</div>
+                <div class="fcat-desc">${esc(cat.description||'')}</div>
+              </div>
+              <div class="fcat-count">
+                ${SVG.chat} ${threads.length} тем · ${totalReplies} ответов
+              </div>
+              <div class="fcat-last">
+                ${last?`
+                  <div class="fcat-last-title">${esc(last.title)}</div>
+                  <div class="fcat-last-meta">${esc(last.profiles?.username||'?')} · ${timeAgo(last.created_at)}</div>
+                `:`<div class="fcat-last-meta" style="text-align:right">Нет тем</div>`}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function openNewThreadGlobal() {
+  if(!F.cats.length) return;
+  if(!F.cat) F.cat = F.cats[0];
+  openNewThread();
 }
 
 async function forumList() {
   F.thread=null;
-  const back=document.getElementById('f-back'); if(back)back.classList.add('hidden');
-  const nb=document.getElementById('f-new'); if(nb)nb.classList.remove('hidden');
-  document.getElementById('f-title').textContent=F.cat?.name||'Форум';
   const body=document.getElementById('f-body');
   body.innerHTML=`<div style="padding:32px;text-align:center"><div style="width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto"></div></div>`;
 
@@ -1019,23 +1132,58 @@ async function forumList() {
   }
   // Pinned threads first
   const sorted = [...data].sort((a,b)=>((b.is_pinned?1:0)-(a.is_pinned?1:0)));
-  body.innerHTML=`<div class="thread-list">`+sorted.map(t=>`
-    <div class="thread-item${t.is_pinned?' is-pinned':''}${t.is_closed?' is-closed':''}" onclick="openThread('${t.id}')">
-      <div class="t-avatar">${SVG.user}</div>
-      <div class="t-info">
-        <div class="t-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          ${t.is_pinned?`<span class="thread-badge badge-pinned">${SVG.pin.replace('width="24"','width="10"').replace('height="24"','height="10"')} ЗАКРЕП</span>`:''}
-          ${t.is_closed?`<span class="thread-badge badge-closed">${SVG.x.replace('width="24"','width="10"').replace('height="24"','height="10"')} ЗАКРЫТО</span>`:''}
-          ${t.prefix?`<span class="thread-badge badge-prefix" style="background:${prefixColor(t.prefix)+'22'};color:${prefixColor(t.prefix)};border:1px solid ${prefixColor(t.prefix)+'44'}">${esc(t.prefix)}</span>`:''}
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.title)}</span>
+  const avHtml = (p) => {
+    if(!p) return `<div class="tr-last-av">${SVG.user}</div>`;
+    return p.avatar_url
+      ? `<div class="tr-last-av"><img src="${p.avatar_url}" /></div>`
+      : `<div class="tr-last-av">${SVG.user}</div>`;
+  };
+  body.innerHTML=`
+    <div class="forum-thread-page">
+      <div class="forum-topbar2">
+        <div class="forum-breadcrumb">
+          <a href="#" onclick="showForumIndex();return false" style="color:var(--muted);text-decoration:none">Форум</a>
+          <span class="forum-breadcrumb-sep">›</span>
+          <span>${esc(F.cat?.name||'')}</span>
         </div>
-        <div class="t-meta">${esc(t.profiles?.username||'?')} ${roleBadge(t.profiles?.role)} · ${timeAgo(t.created_at)}</div>
+        <div style="display:flex;gap:8px">
+          ${curUser?`<button class="btn-primary btn-sm" id="f-new" onclick="openNewThread()">${SVG.plus} Новая тема</button>`:''}
+        </div>
       </div>
-      <div class="t-stats">
-        <div class="t-stat">${SVG.chat}<span>${t.reply_count||0}</span></div>
-        <div class="t-stat">${SVG.eye}<span>${t.views||0}</span></div>
+      <div class="thread-table">
+        <div class="thread-table-head">
+          <div>Тема</div>
+          <div style="text-align:center">Ответы</div>
+          <div style="text-align:center">Просмотры</div>
+          <div style="padding-left:12px">Последний ответ</div>
+        </div>
+        ${sorted.map(t=>`
+          <div class="thread-row${t.is_pinned?' is-pinned':''}${t.is_closed?' is-closed':''}" onclick="openThread('${t.id}')">
+            <div class="tr-left">
+              <div class="tr-title-row">
+                ${t.is_pinned?`<span class="thread-badge badge-pinned">📌 ЗАКРЕП</span>`:''}
+                ${t.is_closed?`<span class="thread-badge badge-closed">🔒 ЗАКРЫТО</span>`:''}
+                ${t.prefix?`<span class="thread-badge badge-prefix" style="background:${prefixColor(t.prefix)+'22'};color:${prefixColor(t.prefix)};border:1px solid ${prefixColor(t.prefix)+'44'}">${esc(t.prefix)}</span>`:''}
+                <span class="tr-title-text">${esc(t.title)}</span>
+              </div>
+              <div class="tr-meta">${esc(t.profiles?.username||'?')} ${roleBadge(t.profiles?.role)} · ${timeAgo(t.created_at)}</div>
+            </div>
+            <div class="tr-num">${t.reply_count||0}</div>
+            <div class="tr-num">${t.views||0}</div>
+            <div class="tr-last">
+              <div class="tr-last-title">${esc(t.title)}</div>
+              <div class="tr-last-meta">
+                ${avHtml(t.profiles)}
+                <span>${esc(t.profiles?.username||'?')}</span>
+                <span style="opacity:.5">·</span>
+                <span>${timeAgo(t.created_at)}</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
       </div>
-    </div>`).join('')+`</div>`;
+    </div>
+  `;
 }
 
 function prefixColor(prefix) {
@@ -1063,8 +1211,7 @@ async function openThread(id) {
     <div style="font-size:12px;color:var(--muted)">Загружаем тему...</div>
   </div>`;
 
-  document.getElementById('f-back')?.classList.remove('hidden');
-  document.getElementById('f-new')?.classList.add('hidden');
+  // no static sidebar nav — handled inline in body
 
   // parallel fetch — thread + posts at the same time, 8s timeout each
   let t = null, posts = [];
@@ -1172,12 +1319,23 @@ async function openThread(id) {
     ` : `<p class="text-muted text-sm text-center" style="padding:20px 0">Войди, чтобы ответить</p>`;
 
   body.innerHTML = `
+    <div class="forum-thread-page">
+    <div class="forum-topbar2" style="margin-bottom:14px">
+      <div class="forum-breadcrumb">
+        <a href="#" onclick="showForumIndex();return false" style="color:var(--muted);text-decoration:none">Форум</a>
+        <span class="forum-breadcrumb-sep">›</span>
+        <a href="#" onclick="forumList();return false" style="color:var(--muted);text-decoration:none">${esc(F.cat?.name||'')}</a>
+        <span class="forum-breadcrumb-sep">›</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px">${esc(t.title||'')}</span>
+      </div>
+    </div>
     ${modBar}
     <div class="post-list">
       ${renderPost(t,true)}
       ${(posts||[]).map(p=>renderPost(p,false)).join('')}
     </div>
     ${replyBlock}
+    </div><!-- /forum-thread-page -->
   `;
   window._currentThreadId = id;
   body.scrollTop = 0;
